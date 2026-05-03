@@ -3,37 +3,25 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-// import apiClient from '../../../api/axiosConfig'; // For future backend connection
+import apiClient from '../../../api/axiosConfig';
+import { useCart } from '../../../context/CartContext';
 
 export default function ProductDetails() {
-  const params = useParams(); // Grabs the product ID from the URL (e.g., P001)
+  const params = useParams();
   const [product, setProduct] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
 
   useEffect(() => {
-    // Simulating fetching a single product from your backend using the ID in the URL
     const fetchProduct = async () => {
       try {
-        // const response = await apiClient.get(`/products/${params.id}`);
-        // setProduct(response.data);
-
-        // Dummy data for testing
-        setTimeout(() => {
-          setProduct({
-            product_id: params.id,
-            product_name: "HAVIT HV-G92 Gamepad",
-            price: 200,
-            category: "Electronics",
-            rating: 5.0,
-            reviews: "1.5k",
-            description: "Experience next-level gaming with the HAVIT HV-G92. Features ergonomic design, dual vibration motors, and seamless connectivity for PC and console gaming. Built for competitive players who demand precision and durability.",
-            stock: 45
-          });
-          setLoading(false);
-        }, 800);
+        const response = await apiClient.get(`/products/${params.id}`);
+        setProduct(response.data);
+        setLoading(false);
       } catch (error) {
         console.error(error);
+        setLoading(false);
       }
     };
 
@@ -105,7 +93,10 @@ export default function ProductDetails() {
               </div>
 
               <div className="flex-1 flex gap-3">
-                <button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-lg transition shadow-lg shadow-indigo-200">
+                <button 
+                  onClick={() => addToCart({ ...product, quantity })}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-lg transition shadow-lg shadow-indigo-200"
+                >
                   Add to Cart
                 </button>
               </div>

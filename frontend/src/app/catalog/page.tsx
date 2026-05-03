@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from "@heroui/react";
-// import apiClient from '../../api/axiosConfig'; 
+import apiClient from '../../api/axiosConfig';
 import { useCart } from '../../context/CartContext';
 
 export default function ProductCatalog() {
@@ -16,18 +16,9 @@ export default function ProductCatalog() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // await apiClient.get('/products');
-        
-        // Dummy data structured like your screenshot for testing
-        setTimeout(() => {
-          setProducts([
-            { product_id: "P001", product_name: "HAVIT HV-G92 Gamepad", price: 200, category: "Electronics", rating: 5.0, reviews: "1.5k" },
-            { product_id: "P002", product_name: "Demonia High Boots", price: 6500, category: "Clothing & Apparel", rating: 5.0, reviews: "1.5k" },
-            { product_id: "P003", product_name: "Graduation Gown", price: 1500, category: "Clothing & Apparel", rating: 5.0, reviews: "1.5k" },
-            { product_id: "P004", product_name: "Ergonomic Chair", price: 4500, category: "Home & Living", rating: 4.8, reviews: "800" },
-          ]);
-          setLoading(false);
-        }, 500); // Added a slight timeout so you can see the loading state
+        const response = await apiClient.get('/products');
+        setProducts(response.data);
+        setLoading(false);
       } catch (err) {
         setError("Could not load products from the inventory system.");
         setLoading(false);
@@ -87,15 +78,12 @@ export default function ProductCatalog() {
               <Link href="/cart" className="text-sm font-bold text-slate-600 hover:text-indigo-600 transition">
                 Cart: {totalItems} items
               </Link>
-              <Button 
-                as={Link}
-                href="/checkout"
-                color="primary"
-                isDisabled={cart.length === 0}
-                className="font-bold bg-indigo-600 shadow-md shadow-indigo-200"
+              <Link 
+                href={cart.length === 0 ? "#" : "/checkout"}
+                className={`inline-flex items-center px-4 py-2 rounded-lg font-bold shadow-md shadow-indigo-200 ${cart.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white'}`}
               >
                 Checkout ↗
-              </Button>
+              </Link>
             </div>
           </div>
 
@@ -132,17 +120,14 @@ export default function ProductCatalog() {
                   <div className="mt-auto grid grid-cols-2 gap-2">
                     <Button 
                       variant="outline"
-                      onPress={() => addToCart(product)} 
+                      onClick={() => addToCart(product)} 
                       className="font-semibold text-xs border-slate-200 text-slate-700 hover:bg-slate-50"
                     >
                       Add to Cart
                     </Button>
                     <Button 
-                      as={Link}
-                      href="/checkout"
-                      color="primary"
-                      onPress={() => addToCart(product)}
-                      className="font-semibold text-xs bg-indigo-500 shadow-md shadow-indigo-200"
+                      onClick={() => { addToCart(product); window.location.href = '/checkout'; }}
+                      className="font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200"
                     >
                       Buy Now
                     </Button>
