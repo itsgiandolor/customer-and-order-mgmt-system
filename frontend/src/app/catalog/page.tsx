@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from "@heroui/react";
+<<<<<<< HEAD
 import apiClient from '../../api/axiosConfig';
+=======
+>>>>>>> 2a0028e807161a0fdf83aeb6cf93fe9f0209ddac
 import { useCart } from '../../context/CartContext';
 
 export default function ProductCatalog() {
@@ -16,9 +19,21 @@ export default function ProductCatalog() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+<<<<<<< HEAD
         const response = await apiClient.get('/products');
         setProducts(response.data);
         setLoading(false);
+=======
+        setTimeout(() => {
+          setProducts([
+            { product_id: "P001", product_name: "HAVIT HV-G92 Gamepad", price: 200, category: "Electronics", rating: 5.0, reviews: "1.5k" },
+            { product_id: "P002", product_name: "Demonia High Boots", price: 6500, category: "Clothing & Apparel", rating: 5.0, reviews: "1.5k" },
+            { product_id: "P003", product_name: "Graduation Gown", price: 1500, category: "Clothing & Apparel", rating: 5.0, reviews: "1.5k" },
+            { product_id: "P004", product_name: "Ergonomic Chair", price: 4500, category: "Home & Living", rating: 4.8, reviews: "800" },
+          ]);
+          setLoading(false);
+        }, 500); 
+>>>>>>> 2a0028e807161a0fdf83aeb6cf93fe9f0209ddac
       } catch (err) {
         setError("Could not load products from the inventory system.");
         setLoading(false);
@@ -46,8 +61,7 @@ export default function ProductCatalog() {
         <h1 className="relative z-10 text-6xl md:text-8xl font-black text-white/90 tracking-tighter uppercase">Shop</h1>
       </div>
 
-      {/* Main Content & Sidebar Container */}
-      <div className="flex flex-col md:flex-row max-w-[1400px] mx-auto w-full p-6 gap-8 flex-grow">
+      <div className="flex flex-col md:flex-row max-w-350 mx-auto w-full p-6 gap-8 grow">
         
         {/* Left Sidebar */}
         <aside className="w-full md:w-64 shrink-0">
@@ -78,26 +92,39 @@ export default function ProductCatalog() {
               <Link href="/cart" className="text-sm font-bold text-slate-600 hover:text-indigo-600 transition">
                 Cart: {totalItems} items
               </Link>
+<<<<<<< HEAD
               <Link 
                 href={cart.length === 0 ? "#" : "/checkout"}
                 className={`inline-flex items-center px-4 py-2 rounded-lg font-bold shadow-md shadow-indigo-200 ${cart.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white'}`}
               >
                 Checkout ↗
+=======
+              
+              <Link href="/checkout">
+                {/* FIXED: Removed color="primary" and used variant="primary" per the error in image_0b6ca6.png */}
+                <Button 
+                  variant="primary"
+                  isDisabled={cart.length === 0}
+                  className="font-bold bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                >
+                  Checkout ↗
+                </Button>
+>>>>>>> 2a0028e807161a0fdf83aeb6cf93fe9f0209ddac
               </Link>
             </div>
           </div>
 
           {loading ? (
-             <div className="flex-grow flex flex-col items-center justify-center text-slate-500">
+             <div className="grow flex flex-col items-center justify-center text-slate-500">
                 <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
                 Loading catalog...
              </div>
           ) : error ? (
-            <div className="flex-grow flex items-center justify-center text-red-500">{error}</div>
+            <div className="grow flex items-center justify-center text-red-500">{error}</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {products.map((product) => (
-                <div key={product.product_id} className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col">
+                <div key={product.product_id} className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col" >
                   
                   {/* Image Area */}
                   <Link href={`/products/${product.product_id}`} className="relative aspect-square bg-slate-50 rounded-lg mb-4 flex items-center justify-center overflow-hidden cursor-pointer">
@@ -116,8 +143,8 @@ export default function ProductCatalog() {
                   
                   <p className="text-lg font-extrabold text-indigo-600 mb-5">₱{product.price}</p>
                   
-                  {/* Action Buttons using HeroUI */}
                   <div className="mt-auto grid grid-cols-2 gap-2">
+                    {/* FIXED: Changed variant="bordered" to variant="outline" per the allowed types list in image_0b6ca6.png */}
                     <Button 
                       variant="outline"
                       onClick={() => addToCart(product)} 
@@ -125,12 +152,26 @@ export default function ProductCatalog() {
                     >
                       Add to Cart
                     </Button>
+<<<<<<< HEAD
                     <Button 
                       onClick={() => { addToCart(product); window.location.href = '/checkout'; }}
                       className="font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200"
                     >
                       Buy Now
                     </Button>
+=======
+
+                    <Link href="/checkout" className="w-full">
+                      {/* FIXED: Removed color="primary" and used variant="primary" */}
+                      <Button 
+                        variant="primary"
+                        onPress={() => addToCart(product)}
+                        className="w-full font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200"
+                      >
+                        Buy Now
+                      </Button>
+                    </Link>
+>>>>>>> 2a0028e807161a0fdf83aeb6cf93fe9f0209ddac
                   </div>
                 </div>
               ))}
