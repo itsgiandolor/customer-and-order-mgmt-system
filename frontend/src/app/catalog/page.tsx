@@ -3,10 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from "@heroui/react";
-<<<<<<< HEAD
 import apiClient from '../../api/axiosConfig';
-=======
->>>>>>> 2a0028e807161a0fdf83aeb6cf93fe9f0209ddac
 import { useCart } from '../../context/CartContext';
 
 export default function ProductCatalog() {
@@ -19,21 +16,9 @@ export default function ProductCatalog() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-<<<<<<< HEAD
         const response = await apiClient.get('/products');
         setProducts(response.data);
         setLoading(false);
-=======
-        setTimeout(() => {
-          setProducts([
-            { product_id: "P001", product_name: "HAVIT HV-G92 Gamepad", price: 200, category: "Electronics", rating: 5.0, reviews: "1.5k" },
-            { product_id: "P002", product_name: "Demonia High Boots", price: 6500, category: "Clothing & Apparel", rating: 5.0, reviews: "1.5k" },
-            { product_id: "P003", product_name: "Graduation Gown", price: 1500, category: "Clothing & Apparel", rating: 5.0, reviews: "1.5k" },
-            { product_id: "P004", product_name: "Ergonomic Chair", price: 4500, category: "Home & Living", rating: 4.8, reviews: "800" },
-          ]);
-          setLoading(false);
-        }, 500); 
->>>>>>> 2a0028e807161a0fdf83aeb6cf93fe9f0209ddac
       } catch (err) {
         setError("Could not load products from the inventory system.");
         setLoading(false);
@@ -92,24 +77,11 @@ export default function ProductCatalog() {
               <Link href="/cart" className="text-sm font-bold text-slate-600 hover:text-indigo-600 transition">
                 Cart: {totalItems} items
               </Link>
-<<<<<<< HEAD
               <Link 
                 href={cart.length === 0 ? "#" : "/checkout"}
                 className={`inline-flex items-center px-4 py-2 rounded-lg font-bold shadow-md shadow-indigo-200 ${cart.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white'}`}
               >
                 Checkout ↗
-=======
-              
-              <Link href="/checkout">
-                {/* FIXED: Removed color="primary" and used variant="primary" per the error in image_0b6ca6.png */}
-                <Button 
-                  variant="primary"
-                  isDisabled={cart.length === 0}
-                  className="font-bold bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                >
-                  Checkout ↗
-                </Button>
->>>>>>> 2a0028e807161a0fdf83aeb6cf93fe9f0209ddac
               </Link>
             </div>
           </div>
@@ -152,26 +124,12 @@ export default function ProductCatalog() {
                     >
                       Add to Cart
                     </Button>
-<<<<<<< HEAD
                     <Button 
                       onClick={() => { addToCart(product); window.location.href = '/checkout'; }}
                       className="font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200"
                     >
                       Buy Now
                     </Button>
-=======
-
-                    <Link href="/checkout" className="w-full">
-                      {/* FIXED: Removed color="primary" and used variant="primary" */}
-                      <Button 
-                        variant="primary"
-                        onPress={() => addToCart(product)}
-                        className="w-full font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200"
-                      >
-                        Buy Now
-                      </Button>
-                    </Link>
->>>>>>> 2a0028e807161a0fdf83aeb6cf93fe9f0209ddac
                   </div>
                 </div>
               ))}
