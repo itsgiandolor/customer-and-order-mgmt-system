@@ -37,9 +37,9 @@ export default function CartPage() {
                 KAM<span className="text-indigo-500">S</span>
               </Link>
               <div className="flex items-center gap-24">
-                <Link href="/catalog" className="text-white text-xl font-semibold">Shop</Link>
-                <Link href="/orders" className="text-white text-xl">Orders</Link>
-                <Link href="#" className="text-white text-xl">How It Works</Link>
+                <Link href="/catalog" className="text-white text-xl">Shop</Link>
+                <Link href="/track" className="text-white text-xl">Track Order</Link>
+                <Link href="/cart" className="text-white text-xl font-semibold">Cart</Link>
                 <Link href="#" className="text-white text-xl">About Us</Link>
               </div>
             </div>
@@ -70,9 +70,9 @@ export default function CartPage() {
               KAM<span className="text-indigo-500">S</span>
             </Link>
             <div className="hidden md:flex items-center gap-6 lg:gap-24">
-              <Link href="/catalog" className="text-white text-base lg:text-xl font-semibold">Shop</Link>
-              <Link href="/orders" className="text-white text-base lg:text-xl">Orders</Link>
-              <Link href="#" className="text-white text-base lg:text-xl">How It Works</Link>
+              <Link href="/catalog" className="text-white text-base lg:text-xl">Shop</Link>
+              <Link href="/track" className="text-white text-base lg:text-xl">Track Order</Link>
+              <Link href="/cart" className="text-white text-base lg:text-xl font-semibold">Cart</Link>
               <Link href="#" className="text-white text-base lg:text-xl">About Us</Link>
             </div>
           </div>

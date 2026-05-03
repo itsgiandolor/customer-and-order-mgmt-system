@@ -1,5 +1,13 @@
 const Order = require("../models/Order");
 
+// In-memory fallback when MongoDB is not available
+let memoryOrders = [];
+
+const isMongoConnected = () => {
+    const mongoose = require("mongoose");
+    return mongoose.connection.readyState === 1;
+};
+
 const generateOrderId = () => {
     return "ORD-" + Date.now();
 };
@@ -19,15 +27,26 @@ exports.createOrder = async (req, res) => {
 
         const total_amount = computedItems.reduce((sum, item) => sum + item.subtotal, 0);
 
-        const order = await Order.create({
+        const orderData = {
             order_id: generateOrderId(),
             customer_info,
-            order_source,
+            order_source: order_source || "web",
             items: computedItems,
             total_amount,
             payment_status: "Pending",
             order_status: "Processing",
-        });
+            createdAt: new Date(),
+        };
+
+        if (!isMongoConnected()) {
+            memoryOrders.push(orderData);
+            return res.status(201).json({
+                message: "Order created successfully (in-memory).",
+                order: orderData,
+            });
+        }
+
+        const order = await Order.create(orderData);
 
         res.status(201).json({
             message: "Order created successfully.",
@@ -50,12 +69,14 @@ exports.getOrders = async (req, res) => {
 
 exports.getOrderById = async (req, res) => {
     try {
-        const order = await Order.findOne({ order_id: req.params.order_id });
-
-        if (!order) {
-            return res.status(404).json({ message: "Order not found." });
+        if (!isMongoConnected()) {
+            const order = memoryOrders.find(o => o.order_id === req.params.order_id);
+            if (!order) return res.status(404).json({ message: "Order not found." });
+            return res.status(200).json(order);
         }
 
+        const order = await Order.findOne({ order_id: req.params.order_id });
+        if (!order) return res.status(404).json({ message: "Order not found." });
         res.status(200).json(order);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -65,11 +86,16 @@ exports.getOrderById = async (req, res) => {
 exports.trackOrder = async (req, res) => {
     try {
         const { order_id, contact_number } = req.query;
+        let order;
 
-        const order = await Order.findOne({
-            order_id,
-            "customer_info.contact_number": contact_number,
-        });
+        if (!isMongoConnected()) {
+            order = memoryOrders.find(o => o.order_id === order_id && o.customer_info.contact_number === contact_number);
+        } else {
+            order = await Order.findOne({
+                order_id,
+                "customer_info.contact_number": contact_number,
+            });
+        }
 
         if (!order) {
             return res.status(404).json({ message: "Order not found or contact number does not match." });
@@ -81,7 +107,27 @@ exports.trackOrder = async (req, res) => {
             payment_status: order.payment_status,
             order_status: order.order_status,
             total_amount: order.total_amount,
+            items: order.items,
+            delivery_address: order.customer_info.delivery_address,
+            createdAt: order.createdAt,
         });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.getOrdersByCustomer = async (req, res) => {
+    try {
+        const { contact_number } = req.params;
+        let orders;
+
+        if (!isMongoConnected()) {
+            orders = memoryOrders.filter(o => o.customer_info.contact_number === contact_number);
+        } else {
+            orders = await Order.find({ "customer_info.contact_number": contact_number }).sort({ createdAt: -1 });
+        }
+
+        res.status(200).json(orders);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

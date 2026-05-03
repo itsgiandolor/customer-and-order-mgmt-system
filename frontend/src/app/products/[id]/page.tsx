@@ -37,9 +37,25 @@ export default function ProductDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-8 pb-16">
-      <div className="max-w-6xl mx-auto px-6">
-        
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <nav className="bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-5">
+        <div className="flex items-center justify-between max-w-[1920px] mx-auto">
+          <div className="flex items-center gap-8 lg:gap-52">
+            <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
+              KAM<span className="text-indigo-500">S</span>
+            </Link>
+            <div className="hidden md:flex items-center gap-6 lg:gap-24">
+              <Link href="/catalog" className="text-white text-base lg:text-xl">Shop</Link>
+              <Link href="/track" className="text-white text-base lg:text-xl">Track Order</Link>
+              <Link href="/cart" className="text-white text-base lg:text-xl">Cart</Link>
+              <Link href="#" className="text-white text-base lg:text-xl">About Us</Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="pt-8 pb-16 px-6 max-w-6xl mx-auto">
         {/* Breadcrumbs */}
         <nav className="text-sm font-medium text-slate-500 mb-8">
           <Link href="/" className="hover:text-indigo-600 transition">Home</Link>

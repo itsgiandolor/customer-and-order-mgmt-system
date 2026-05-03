@@ -46,7 +46,24 @@ export default function ProductCatalog() {
         <h1 className="relative z-10 text-6xl md:text-8xl font-black text-white/90 tracking-tighter uppercase">Shop</h1>
       </div>
 
-      <div className="flex flex-col md:flex-row max-w-350 mx-auto w-full p-6 gap-8 grow">
+      {/* Top Navigation Bar */}
+      <nav className="bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-4">
+        <div className="flex items-center justify-between max-w-[1920px] mx-auto">
+          <div className="flex items-center gap-8 lg:gap-52">
+            <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
+              KAM<span className="text-indigo-500">S</span>
+            </Link>
+            <div className="hidden md:flex items-center gap-6 lg:gap-24">
+              <Link href="/catalog" className="text-white text-base lg:text-xl font-semibold">Shop</Link>
+              <Link href="/track" className="text-white text-base lg:text-xl">Track Order</Link>
+              <Link href="/cart" className="text-white text-base lg:text-xl">Cart</Link>
+              <Link href="#" className="text-white text-base lg:text-xl">About Us</Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="flex flex-col md:flex-row max-w-[1400px] mx-auto w-full p-6 gap-8 grow">
         
         {/* Left Sidebar */}
         <aside className="w-full md:w-64 shrink-0">
