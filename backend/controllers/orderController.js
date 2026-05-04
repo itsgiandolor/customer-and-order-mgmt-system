@@ -12,6 +12,8 @@ const generateOrderId = () => {
     return "ORD-" + Date.now();
 };
 
+const fetch = require("node-fetch"); // if not using Node 18+
+
 exports.createOrder = async (req, res) => {
     try {
         const { customer_info, order_source, items } = req.body;
@@ -20,39 +22,59 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ message: "Customer information and items are required." });
         }
 
+        // 🔥 1. Fetch inventory data
+        const inventoryRes = await fetch("https://inventory-subsystem-api.onrender.com/api/inventory");
+        const inventoryData = await inventoryRes.json();
+
+        // 🔥 2. Check stock for EACH item
+        for (const item of items) {
+            const inventoryItem = inventoryData.find(
+                (inv) => inv.product_id === item.product_id
+            );
+
+            if (!inventoryItem) {
+                return res.status(400).json({
+                    message: `Product ${item.product_id} not found in inventory`
+                });
+            }
+
+            if (inventoryItem.current_stock < item.quantity) {
+                return res.status(400).json({
+                    message: `Not enough stock for ${item.product_id}`,
+                    available: inventoryItem.current_stock
+                });
+            }
+        }
+
+        // 🔥 3. Compute totals (only AFTER stock is valid)
         const computedItems = items.map((item) => ({
             ...item,
             subtotal: item.quantity * item.price,
         }));
 
-        const total_amount = computedItems.reduce((sum, item) => sum + item.subtotal, 0);
+        const total_amount = computedItems.reduce(
+            (sum, item) => sum + item.subtotal,
+            0
+        );
 
-        const orderData = {
+        // 🔥 4. Create order
+        const order = await Order.create({
             order_id: generateOrderId(),
             customer_info,
-            order_source: order_source || "web",
+            order_source,
             items: computedItems,
             total_amount,
             payment_status: "Pending",
             order_status: "Processing",
-            createdAt: new Date(),
-        };
-
-        if (!isMongoConnected()) {
-            memoryOrders.push(orderData);
-            return res.status(201).json({
-                message: "Order created successfully (in-memory).",
-                order: orderData,
-            });
-        }
-
-        const order = await Order.create(orderData);
+        });
 
         res.status(201).json({
             message: "Order created successfully.",
             order,
         });
+
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: error.message });
     }
 };
