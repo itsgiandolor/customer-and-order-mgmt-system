@@ -44,8 +44,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const updateQuantity = (id: string, quantity: number) => {
     if (quantity < 1) return;
-    setCart(prev => prev.map(item => item.product_id === id 
-      ? { ...item, quantity, subtotal: quantity * item.price } 
+    setCart(prev => prev.map(item => item.product_id === id
+      ? { ...item, quantity, subtotal: quantity * item.price }
       : item
     ));
   };

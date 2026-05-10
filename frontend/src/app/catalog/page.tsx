@@ -6,11 +6,24 @@ import { Button } from "@heroui/react";
 import apiClient from '../../api/axiosConfig';
 import { useCart } from '../../context/CartContext';
 
+const getStockBadge = (status: string, stock: number | null) => {
+  if (stock === null) return null; // Inventory API was down, show nothing
+  if (status === 'ERROR' || stock === 0) return (
+    <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full">Out of Stock</span>
+  );
+  if (status === 'LOW_STOCK') return (
+    <span className="px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded-full">Only {stock} left</span>
+  );
+  return (
+    <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">In Stock</span>
+  );
+};
+
 export default function ProductCatalog() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const { cart, addToCart } = useCart();
 
   useEffect(() => {
@@ -32,9 +45,9 @@ export default function ProductCatalog() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      
+
       {/* Hero Banner Area */}
-      <div 
+      <div
         className="relative w-full h-48 md:h-64 bg-slate-900 flex items-center justify-center"
         style={{
           backgroundImage: "url('https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop')",
@@ -64,7 +77,7 @@ export default function ProductCatalog() {
       </nav>
 
       <div className="flex flex-col md:flex-row max-w-[1400px] mx-auto w-full p-6 gap-8 grow">
-        
+
         {/* Left Sidebar */}
         <aside className="w-full md:w-64 shrink-0">
           <h2 className="text-xl font-bold text-slate-800 mb-4">Categories</h2>
@@ -94,7 +107,7 @@ export default function ProductCatalog() {
               <Link href="/cart" className="text-sm font-bold text-slate-600 hover:text-indigo-600 transition">
                 Cart: {totalItems} items
               </Link>
-              <Link 
+              <Link
                 href={cart.length === 0 ? "#" : "/checkout"}
                 className={`inline-flex items-center px-4 py-2 rounded-lg font-bold shadow-md shadow-indigo-200 ${cart.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white'}`}
               >
@@ -104,17 +117,17 @@ export default function ProductCatalog() {
           </div>
 
           {loading ? (
-             <div className="grow flex flex-col items-center justify-center text-slate-500">
-                <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-                Loading catalog...
-             </div>
+            <div className="grow flex flex-col items-center justify-center text-slate-500">
+              <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+              Loading catalog...
+            </div>
           ) : error ? (
             <div className="grow flex items-center justify-center text-red-500">{error}</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {products.map((product) => (
                 <div key={product.product_id} className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col" >
-                  
+
                   {/* Image Area */}
                   <Link href={`/products/${product.product_id}`} className="relative aspect-square bg-slate-50 rounded-lg mb-4 flex items-center justify-center overflow-hidden cursor-pointer">
                     <span className="absolute top-2 left-2 bg-[#a3ff12] text-slate-900 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide shadow-sm">New</span>
@@ -124,26 +137,32 @@ export default function ProductCatalog() {
                   <h3 className="font-bold text-slate-800 text-sm mb-1 truncate" title={product.product_name}>
                     {product.product_name}
                   </h3>
-                  
+
                   <div className="flex items-center gap-1 mb-2">
                     <span className="text-amber-400 text-xs">★</span>
                     <span className="text-xs text-slate-600 font-medium">{product.rating} <span className="text-slate-400 font-normal">({product.reviews})</span></span>
                   </div>
-                  
-                  <p className="text-lg font-extrabold text-indigo-600 mb-5">₱{product.price}</p>
-                  
+
+                  <p className="text-lg font-extrabold text-indigo-600 mb-3">₱{product.price}</p>
+
+                  <div className="mb-5">
+                    {getStockBadge(product.stock_status, product.current_stock)}
+                  </div>
+
                   <div className="mt-auto grid grid-cols-2 gap-2">
                     {/* FIXED: Changed variant="bordered" to variant="outline" per the allowed types list in image_0b6ca6.png */}
-                    <Button 
+                    <Button
                       variant="outline"
-                      onClick={() => addToCart(product)} 
-                      className="font-semibold text-xs border-slate-200 text-slate-700 hover:bg-slate-50"
+                      onClick={() => addToCart(product)}
+                      disabled={product.stock_status === 'ERROR' || product.current_stock === 0}
+                      className="font-semibold text-xs border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Add to Cart
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => { addToCart(product); window.location.href = '/checkout'; }}
-                      className="font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200"
+                      disabled={product.stock_status === 'ERROR' || product.current_stock === 0}
+                      className="font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Buy Now
                     </Button>

@@ -61,7 +61,7 @@ function TrackOrderPageInner() {
 
   const fetchOrders = async (contact: string) => {
     if (!contact) return;
-    
+
     setLoading(true);
     setError(null);
     setSearched(true);
@@ -173,7 +173,7 @@ function TrackOrderPageInner() {
           /* Selected Order Details View */
           <div className="space-y-6">
             <div className="flex items-center gap-4 mb-4">
-              <Button 
+              <Button
                 onClick={clearSelection}
                 className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg"
               >
@@ -218,7 +218,7 @@ function TrackOrderPageInner() {
               <h3 className="text-lg font-semibold text-black mb-6">Order Progress</h3>
               <div className="relative">
                 <div className="absolute top-6 left-0 right-0 h-1 bg-gray-200 rounded">
-                  <div 
+                  <div
                     className="h-full bg-indigo-500 rounded transition-all duration-500"
                     style={{ width: `${(getCurrentStep(selectedOrder.order_status) / (orderStatusSteps.length - 1)) * 100}%` }}
                   />
@@ -230,10 +230,9 @@ function TrackOrderPageInner() {
                     const isCurrent = index === currentStep;
                     return (
                       <div key={step.status} className="flex flex-col items-center">
-                        <div 
-                          className={`w-12 h-12 rounded-full flex items-center justify-center text-lg mb-2 z-10 transition-colors ${
-                            isCompleted ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-400'
-                          } ${isCurrent ? 'ring-4 ring-indigo-200' : ''}`}
+                        <div
+                          className={`w-12 h-12 rounded-full flex items-center justify-center text-lg mb-2 z-10 transition-colors ${isCompleted ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-400'
+                            } ${isCurrent ? 'ring-4 ring-indigo-200' : ''}`}
                         >
                           {isCompleted ? '✓' : step.icon}
                         </div>
@@ -277,7 +276,7 @@ function TrackOrderPageInner() {
                   <span className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
                   Active Orders ({inTransitOrders.length})
                 </h2>
-                
+
                 {inTransitOrders.length === 0 ? (
                   <Card className="rounded-xl border border-gray-200 shadow-none p-8 text-center">
                     <div className="text-5xl mb-4">🚚</div>
@@ -289,8 +288,8 @@ function TrackOrderPageInner() {
                 ) : (
                   <div className="space-y-4">
                     {inTransitOrders.map((order) => (
-                      <Card 
-                        key={order.order_id} 
+                      <Card
+                        key={order.order_id}
                         onClick={() => selectOrder(order)}
                         className="rounded-xl border border-gray-200 shadow-none p-5 cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all"
                       >
@@ -338,8 +337,8 @@ function TrackOrderPageInner() {
                   <h2 className="text-xl font-semibold text-gray-700 mb-4">Other Orders ({otherOrders.length})</h2>
                   <div className="space-y-3">
                     {otherOrders.slice(0, 5).map((order) => (
-                      <Card 
-                        key={order.order_id} 
+                      <Card
+                        key={order.order_id}
                         onClick={() => selectOrder(order)}
                         className="rounded-xl border border-gray-200 shadow-none p-4 cursor-pointer hover:border-gray-400 transition-all opacity-75 hover:opacity-100"
                       >

@@ -6,6 +6,19 @@ import Link from 'next/link';
 import apiClient from '../../../api/axiosConfig';
 import { useCart } from '../../../context/CartContext';
 
+const getStockBadge = (status: string, stock: number | null) => {
+  if (stock === null) return null; // Inventory API was down, show nothing
+  if (status === 'ERROR' || stock === 0) return (
+    <span className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-full font-semibold">Out of Stock</span>
+  );
+  if (status === 'LOW_STOCK') return (
+    <span className="px-3 py-1 text-sm bg-amber-100 text-amber-700 rounded-full font-semibold">Only {stock} left</span>
+  );
+  return (
+    <span className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-full font-semibold">In Stock</span>
+  );
+};
+
 export default function ProductDetails() {
   const params = useParams();
   const [product, setProduct] = useState<any>(null);
@@ -66,7 +79,7 @@ export default function ProductDetails() {
         </nav>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col md:flex-row gap-12">
-          
+
           {/* Left: Product Image */}
           <div className="w-full md:w-1/2">
             <div className="aspect-square bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
@@ -78,16 +91,16 @@ export default function ProductDetails() {
           <div className="w-full md:w-1/2 flex flex-col">
             <span className="text-sm font-bold text-indigo-500 tracking-widest uppercase mb-2">{product.category}</span>
             <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">{product.product_name}</h1>
-            
+
             <div className="flex items-center gap-2 mb-6">
               <div className="flex text-amber-400">★★★★★</div>
               <span className="text-sm text-slate-600">({product.reviews} Customer Reviews)</span>
               <span className="mx-2 text-gray-300">|</span>
-              <span className="text-sm font-medium text-emerald-600">In Stock ({product.stock})</span>
+              {getStockBadge(product.stock_status, product.current_stock)}
             </div>
 
             <p className="text-3xl font-black text-slate-900 mb-6">₱{product.price}</p>
-            
+
             <p className="text-slate-600 leading-relaxed mb-8 border-b border-gray-100 pb-8">
               {product.description}
             </p>
@@ -95,25 +108,26 @@ export default function ProductDetails() {
             {/* Quantity & Actions */}
             <div className="flex items-center gap-6 mb-8 mt-auto">
               <div className="flex items-center border border-gray-300 rounded-lg">
-                <button 
+                <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   className="px-4 py-3 text-slate-600 hover:bg-gray-100 transition rounded-l-lg font-bold"
                 >−</button>
                 <span className="px-4 py-3 font-semibold text-slate-800 border-x border-gray-300 min-w-[50px] text-center">
                   {quantity}
                 </span>
-                <button 
+                <button
                   onClick={() => setQuantity(quantity + 1)}
                   className="px-4 py-3 text-slate-600 hover:bg-gray-100 transition rounded-r-lg font-bold"
                 >+</button>
               </div>
 
               <div className="flex-1 flex gap-3">
-                <button 
+                <button
                   onClick={() => addToCart({ ...product, quantity })}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-lg transition shadow-lg shadow-indigo-200"
+                  disabled={product.stock_status === 'ERROR' || product.current_stock === 0}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-lg transition shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add to Cart
+                  {product.stock_status === 'ERROR' || product.current_stock === 0 ? 'Out of Stock' : 'Add to Cart'}
                 </button>
               </div>
             </div>
