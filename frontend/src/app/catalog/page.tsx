@@ -23,23 +23,32 @@ export default function ProductCatalog() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const { cart, addToCart } = useCart();
 
+  const categories = ['Clothing & Apparel', 'Home & Living', 'Electronics'];
+
   useEffect(() => {
     const fetchProducts = async () => {
+      setLoading(true);
       try {
-        const response = await apiClient.get('/products');
+        // Utilizing the backend's ?category query parameter
+        const endpoint = selectedCategory 
+          ? `/products?category=${encodeURIComponent(selectedCategory)}` 
+          : '/products';
+        const response = await apiClient.get(endpoint);
         setProducts(response.data);
-        setLoading(false);
+        setError(null);
       } catch (err) {
         setError("Could not load products from the inventory system.");
+      } finally {
         setLoading(false);
       }
     };
 
     fetchProducts();
-  }, []);
+  }, [selectedCategory]);
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -61,7 +70,7 @@ export default function ProductCatalog() {
 
       {/* Top Navigation Bar */}
       <nav className="bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-4">
-        <div className="flex items-center justify-between max-w-[1920px] mx-auto">
+        <div className="flex items-center justify-between max-w-480 mx-auto">
           <div className="flex items-center gap-8 lg:gap-52">
             <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
               KAM<span className="text-indigo-500">S</span>
@@ -76,25 +85,28 @@ export default function ProductCatalog() {
         </div>
       </nav>
 
-      <div className="flex flex-col md:flex-row max-w-[1400px] mx-auto w-full p-6 gap-8 grow">
+      <div className="flex flex-col md:flex-row max-w-350 mx-auto w-full p-6 gap-8 grow">
 
         {/* Left Sidebar */}
         <aside className="w-full md:w-64 shrink-0">
           <h2 className="text-xl font-bold text-slate-800 mb-4">Categories</h2>
           <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 mb-4">
-            <div className="font-semibold text-slate-800 flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+            <div 
+              className={`font-semibold cursor-pointer flex items-center gap-2 mb-4 pb-3 border-b border-gray-100 ${!selectedCategory ? 'text-indigo-600' : 'text-slate-800'}`}
+              onClick={() => setSelectedCategory(null)}
+            >
               <span>🛍️</span> All Products
             </div>
-            <ul className="space-y-3 pl-2 text-sm text-slate-600 font-medium">
-              <li className="hover:text-indigo-600 cursor-pointer transition flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-200"></span> Clothing & Apparel
-              </li>
-              <li className="hover:text-indigo-600 cursor-pointer transition flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-200"></span> Home & Living
-              </li>
-              <li className="hover:text-indigo-600 cursor-pointer transition flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-200"></span> Electronics
-              </li>
+            <ul className="space-y-3 pl-2 text-sm font-medium">
+              {categories.map(cat => (
+                <li 
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+                  className={`cursor-pointer transition flex items-center gap-2 ${selectedCategory === cat ? 'text-indigo-600 font-bold' : 'text-slate-600 hover:text-indigo-600'}`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${selectedCategory === cat ? 'bg-indigo-600' : 'bg-indigo-200'}`}></span> {cat}
+                </li>
+              ))}
             </ul>
           </div>
         </aside>
@@ -123,20 +135,30 @@ export default function ProductCatalog() {
             </div>
           ) : error ? (
             <div className="grow flex items-center justify-center text-red-500">{error}</div>
+          ) : products.length === 0 ? (
+            <div className="grow flex items-center justify-center text-slate-500">No products found in this category.</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {products.map((product) => (
                 <div key={product.product_id} className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col" >
 
-                  {/* Image Area */}
+                  {/* Image Area mapped to Backend image_url */}
                   <Link href={`/products/${product.product_id}`} className="relative aspect-square bg-slate-50 rounded-lg mb-4 flex items-center justify-center overflow-hidden cursor-pointer">
-                    <span className="absolute top-2 left-2 bg-[#a3ff12] text-slate-900 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide shadow-sm">New</span>
-                    <span className="text-gray-400 text-sm">Image Placeholder</span>
+                    <img 
+                      src={product.image_url || 'https://placehold.co/300x200'} 
+                      alt={product.product_name} 
+                      className="w-full h-full object-cover"
+                    />
                   </Link>
 
                   <h3 className="font-bold text-slate-800 text-sm mb-1 truncate" title={product.product_name}>
                     {product.product_name}
                   </h3>
+                  
+                  {/* Surfaced the product description from the backend schema */}
+                  <p className="text-xs text-slate-500 mb-2 line-clamp-2" title={product.description}>
+                    {product.description}
+                  </p>
 
                   <div className="flex items-center gap-1 mb-2">
                     <span className="text-amber-400 text-xs">★</span>
@@ -150,18 +172,17 @@ export default function ProductCatalog() {
                   </div>
 
                   <div className="mt-auto grid grid-cols-2 gap-2">
-                    {/* FIXED: Changed variant="bordered" to variant="outline" per the allowed types list in image_0b6ca6.png */}
                     <Button
                       variant="outline"
                       onClick={() => addToCart(product)}
-                      disabled={product.stock_status === 'ERROR' || product.current_stock === 0}
+                      isDisabled={product.stock_status === 'ERROR' || product.current_stock === 0}
                       className="font-semibold text-xs border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Add to Cart
                     </Button>
                     <Button
                       onClick={() => { addToCart(product); window.location.href = '/checkout'; }}
-                      disabled={product.stock_status === 'ERROR' || product.current_stock === 0}
+                      isDisabled={product.stock_status === 'ERROR' || product.current_stock === 0}
                       className="font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Buy Now
