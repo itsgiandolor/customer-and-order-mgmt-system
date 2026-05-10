@@ -11,9 +11,9 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [voucher, setVoucher] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('credit_card');
+  const [paymentMethod, setPaymentMethod] = useState('GCash');
   const [deliveryMethod, setDeliveryMethod] = useState('standard');
-  
+
   // Form state
   const [formData, setFormData] = useState({
     firstName: '',
@@ -24,10 +24,6 @@ export default function CheckoutPage() {
     city: '',
     address: '',
     zipCode: '',
-    cardNumber: '',
-    cardholderName: '',
-    expiryDate: '',
-    cvv: '',
   });
 
   const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
@@ -40,65 +36,65 @@ export default function CheckoutPage() {
   };
 
   const handleSubmit = async () => {
-  // --- Validation ---
-  if (!agreedToTerms) { alert('Please agree to the data processing terms'); return; }
-  if (!formData.firstName || !formData.lastName || !formData.phone || !formData.email) {
-    alert('Please fill in all personal information fields.'); return;
-  }
-  if (!formData.region || !formData.city || !formData.address || !formData.zipCode) {
-    alert('Please fill in all shipping information fields.'); return;
-  }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(formData.email)) { alert('Please enter a valid email address.'); return; }
-  const phoneRegex = /^(09|\+639)\d{9}$/;
-  if (!phoneRegex.test(formData.phone)) { alert('Please enter a valid Philippine phone number (e.g. 09171234567).'); return; }
+    // --- Validation ---
+    if (!agreedToTerms) { alert('Please agree to the data processing terms'); return; }
+    if (!formData.firstName || !formData.lastName || !formData.phone || !formData.email) {
+      alert('Please fill in all personal information fields.'); return;
+    }
+    if (!formData.region || !formData.city || !formData.address || !formData.zipCode) {
+      alert('Please fill in all shipping information fields.'); return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) { alert('Please enter a valid email address.'); return; }
+    const phoneRegex = /^(09|\+639)\d{9}$/;
+    if (!phoneRegex.test(formData.phone)) { alert('Please enter a valid Philippine phone number (e.g. 09171234567).'); return; }
 
-  setLoading(true);
-  try {
-    // STEP 1: Create the order (this also checks inventory)
-    const orderData = {
-      customer_info: {
-        name: `${formData.firstName} ${formData.lastName}`,
-        email: formData.email,
-        contact_number: formData.phone,
-        delivery_address: `${formData.address}, ${formData.city}, ${formData.region} ${formData.zipCode}`,
-      },
-      order_source: 'web',
-      items: cart.map(item => ({
-        product_id: item.product_id,
-        product_name: item.product_name,
-        quantity: item.quantity,
-        price: item.price,
-      })),
-      shipping_fee: shipping,
-    };
+    setLoading(true);
+    try {
+      // STEP 1: Create the order (this also checks inventory)
+      const orderData = {
+        customer_info: {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          contact_number: formData.phone,
+          delivery_address: `${formData.address}, ${formData.city}, ${formData.region} ${formData.zipCode}`,
+        },
+        order_source: 'web',
+        items: cart.map(item => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        shipping_fee: shipping,
+      };
 
-    const orderResponse = await apiClient.post('/orders', orderData);
-    const orderId = orderResponse.data.order.order_id;
-    const orderTotal = orderResponse.data.order.total_amount;
+      const orderResponse = await apiClient.post('/orders', orderData);
+      const orderId = orderResponse.data.order.order_id;
+      const orderTotal = orderResponse.data.order.total_amount;
 
-    // STEP 2: Confirm payment (simulate for now; replace with real gateway later)
-    const paymentData = {
-      order_id: orderId,
-      payment_method: paymentMethod,  // from your state
-      payment_amount: orderTotal,
-      payment_status: 'Confirmed',
-      transaction_reference: 'TXN-' + Date.now(), // real gateway provides this
-    };
+      // STEP 2: Confirm payment (simulate for now; replace with real gateway later)
+      const paymentData = {
+        order_id: orderId,
+        payment_method: paymentMethod,  // from your state
+        payment_amount: orderTotal,
+        payment_status: 'Confirmed',
+        transaction_reference: 'TXN-' + Date.now(), // real gateway provides this
+      };
 
-    await apiClient.post('/payments/confirm', paymentData);
+      await apiClient.post('/payments/confirm', paymentData);
 
-    clearCart();
-    // Redirect to a success page with the order ID
-    window.location.href = `/track?order_id=${orderId}&contact=${encodeURIComponent(formData.phone)}`;
+      clearCart();
+      // Redirect to a success page with the order ID
+      window.location.href = `/track?order_id=${orderId}&contact=${encodeURIComponent(formData.phone)}`;
 
-  } catch (error: any) {
-    const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
-    alert(msg);
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
+      alert(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (cart.length === 0) {
     return (
@@ -177,7 +173,7 @@ export default function CheckoutPage() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    placeholder="+917xxxxxxx"
+                    placeholder="09171234567"
                     className="w-full outline-none text-black bg-transparent"
                   />
                 </div>
@@ -248,7 +244,7 @@ export default function CheckoutPage() {
 
             {/* Data Consent */}
             <div className="flex items-center gap-3">
-              <Checkbox 
+              <Checkbox
                 isSelected={agreedToTerms}
                 onChange={() => setAgreedToTerms(!agreedToTerms)}
               />
@@ -300,87 +296,23 @@ export default function CheckoutPage() {
             <section>
               <h2 className="text-3xl font-medium text-black mb-6">Payment</h2>
               <div className="space-y-4">
-                <label className="flex items-center gap-3 border-b border-neutral-300 pb-4 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="credit_card"
-                    checked={paymentMethod === 'credit_card'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 accent-indigo-500"
-                  />
-                  <span className="text-xl font-medium text-black">Credit Card</span>
-                </label>
-                {paymentMethod === 'credit_card' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pb-4">
-                    <div className="border-b border-neutral-300 py-2">
-                      <label className="text-sm text-gray-500 block mb-1">Card No.</label>
-                      <input
-                        type="text"
-                        name="cardNumber"
-                        value={formData.cardNumber}
-                        onChange={handleInputChange}
-                        placeholder="1234 5678 9012 3456"
-                        className="w-full outline-none text-black bg-transparent"
-                      />
-                    </div>
-                    <div className="border-b border-neutral-300 py-2">
-                      <label className="text-sm text-gray-500 block mb-1">Cardholder Name</label>
-                      <input
-                        type="text"
-                        name="cardholderName"
-                        value={formData.cardholderName}
-                        onChange={handleInputChange}
-                        placeholder="JUAN LUNA"
-                        className="w-full outline-none text-black bg-transparent"
-                      />
-                    </div>
-                    <div className="border-b border-neutral-300 py-2">
-                      <label className="text-sm text-gray-500 block mb-1">Expiration Date</label>
-                      <input
-                        type="text"
-                        name="expiryDate"
-                        value={formData.expiryDate}
-                        onChange={handleInputChange}
-                        placeholder="MM/YY"
-                        className="w-full outline-none text-black bg-transparent"
-                      />
-                    </div>
-                    <div className="border-b border-neutral-300 py-2">
-                      <label className="text-sm text-gray-500 block mb-1">CVV</label>
-                      <input
-                        type="text"
-                        name="cvv"
-                        value={formData.cvv}
-                        onChange={handleInputChange}
-                        placeholder="123"
-                        className="w-full outline-none text-black bg-transparent"
-                      />
-                    </div>
-                  </div>
-                )}
-                <label className="flex items-center gap-3 border-b border-neutral-300 pb-4 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="paypal"
-                    checked={paymentMethod === 'paypal'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 accent-indigo-500"
-                  />
-                  <span className="text-xl font-medium text-black">PayPal</span>
-                </label>
-                <label className="flex items-center gap-3 border-b border-neutral-300 pb-4 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="apple_pay"
-                    checked={paymentMethod === 'apple_pay'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 accent-indigo-500"
-                  />
-                  <span className="text-xl font-medium text-black">Apple Pay</span>
-                </label>
+                {[
+                  { value: 'GCash', label: 'GCash' },
+                  { value: 'Maya', label: 'Maya' },
+                  { value: 'COD', label: 'Cash on Delivery (COD)' },
+                ].map(({ value, label }) => (
+                  <label key={value} className="flex items-center gap-3 border-b border-neutral-300 pb-4 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="payment"
+                      value={value}
+                      checked={paymentMethod === value}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-5 h-5 accent-indigo-500"
+                    />
+                    <span className="text-xl font-medium text-black">{label}</span>
+                  </label>
+                ))}
               </div>
             </section>
 
@@ -398,7 +330,7 @@ export default function CheckoutPage() {
           <div className="w-full xl:w-[600px]">
             <Card className="rounded-xl border border-neutral-300 shadow-none p-6">
               <h3 className="text-2xl font-medium text-black mb-6">Items ({cart.length})</h3>
-              
+
               {/* Cart Items */}
               <div className="space-y-6 mb-6">
                 {cart.map((item) => (
@@ -424,7 +356,7 @@ export default function CheckoutPage() {
                   onChange={(e) => setVoucher(e.target.value)}
                   className="flex-1 border border-neutral-400 rounded-xl px-4 py-2 text-black outline-none"
                 />
-                <Button 
+                <Button
                   className="bg-indigo-500 text-white font-semibold px-6 rounded-xl"
                 >
                   Apply
