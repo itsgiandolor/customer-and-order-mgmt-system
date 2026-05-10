@@ -14,7 +14,6 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('GCash');
   const [deliveryMethod, setDeliveryMethod] = useState('standard');
 
-  // Form state
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -28,7 +27,7 @@ export default function CheckoutPage() {
 
   const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
   const shipping = deliveryMethod === 'express' ? 90 : 0;
-  const discount = 0; // Calculate based on voucher
+  const discount = 0; 
   const total = subtotal + shipping - discount;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,7 +35,6 @@ export default function CheckoutPage() {
   };
 
   const handleSubmit = async () => {
-    // --- Validation ---
     if (!agreedToTerms) { alert('Please agree to the data processing terms'); return; }
     if (!formData.firstName || !formData.lastName || !formData.phone || !formData.email) {
       alert('Please fill in all personal information fields.'); return;
@@ -51,7 +49,7 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
-      // STEP 1: Create the order (this also checks inventory)
+      // Maps exactly to OrderSchema requirements
       const orderData = {
         customer_info: {
           name: `${formData.firstName} ${formData.lastName}`,
@@ -73,24 +71,27 @@ export default function CheckoutPage() {
       const orderId = orderResponse.data.order.order_id;
       const orderTotal = orderResponse.data.order.total_amount;
 
-      // STEP 2: Confirm payment (simulate for now; replace with real gateway later)
       const paymentData = {
         order_id: orderId,
-        payment_method: paymentMethod,  // from your state
+        payment_method: paymentMethod, 
         payment_amount: orderTotal,
         payment_status: paymentMethod === 'COD' ? 'Pending' : 'Confirmed',
-        transaction_reference: 'TXN-' + Date.now(), // real gateway provides this
+        transaction_reference: 'TXN-' + Date.now(), 
       };
 
       await apiClient.post('/payments/confirm', paymentData);
 
       clearCart();
-      // Redirect to a success page with the order ID
       window.location.href = `/track?order_id=${orderId}&contact=${encodeURIComponent(formData.phone)}`;
 
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
-      alert(msg);
+      // Catch specific inventory rejection handled in backend checkStock()
+      if (error.response?.data?.available !== undefined) {
+         alert(`Stock Error: ${error.response.data.message} Only ${error.response.data.available} left in inventory.`);
+      } else {
+        const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
+        alert(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -100,7 +101,7 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <nav className="bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-5">
-          <div className="flex items-center justify-between max-w-[1920px] mx-auto">
+          <div className="flex items-center justify-between max-w-480 mx-auto">
             <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
               KAM<span className="text-indigo-500">S</span>
             </Link>
@@ -116,9 +117,8 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
       <nav className="bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-5">
-        <div className="flex items-center justify-between max-w-[1920px] mx-auto">
+        <div className="flex items-center justify-between max-w-480 mx-auto">
           <div className="flex items-center gap-8 lg:gap-52">
             <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
               KAM<span className="text-indigo-500">S</span>
@@ -133,14 +133,11 @@ export default function CheckoutPage() {
         </div>
       </nav>
 
-      {/* Main Content */}
-      <div className="max-w-[1920px] mx-auto px-4 lg:px-8 xl:px-20 py-8 lg:py-12">
+      <div className="max-w-480 mx-auto px-4 lg:px-8 xl:px-20 py-8 lg:py-12">
         <h1 className="text-3xl lg:text-4xl font-semibold text-black mb-8">Checkout</h1>
 
         <div className="flex flex-col xl:flex-row gap-8">
-          {/* Left Side - Forms */}
           <div className="flex-1 space-y-8">
-            {/* Personal Information */}
             <section>
               <h2 className="text-2xl font-medium text-black mb-6">Personal Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -191,7 +188,6 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            {/* Shipping Information */}
             <section>
               <h2 className="text-2xl font-medium text-black mb-6">Shipping Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -242,7 +238,6 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            {/* Data Consent */}
             <div className="flex items-center gap-3">
               <Checkbox
                 isSelected={agreedToTerms}
@@ -251,7 +246,6 @@ export default function CheckoutPage() {
               <span className="text-black">I agree to <Link href="#" className="underline">data processing</Link></span>
             </div>
 
-            {/* Delivery Options */}
             <section>
               <h2 className="text-3xl font-medium text-black mb-6">Delivery</h2>
               <div className="space-y-4">
@@ -292,7 +286,6 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            {/* Payment Options */}
             <section>
               <h2 className="text-3xl font-medium text-black mb-6">Payment</h2>
               <div className="space-y-4">
@@ -316,7 +309,6 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            {/* Pay Button */}
             <Button
               onClick={handleSubmit}
               isDisabled={loading || !agreedToTerms}
@@ -326,17 +318,20 @@ export default function CheckoutPage() {
             </Button>
           </div>
 
-          {/* Right Side - Order Summary */}
-          <div className="w-full xl:w-[600px]">
+          <div className="w-full xl:w-150">
             <Card className="rounded-xl border border-neutral-300 shadow-none p-6">
               <h3 className="text-2xl font-medium text-black mb-6">Items ({cart.length})</h3>
 
-              {/* Cart Items */}
               <div className="space-y-6 mb-6">
-                {cart.map((item) => (
+                {cart.map((item: any) => (
                   <div key={item.product_id} className="flex items-center gap-4 pb-4 border-b border-neutral-200">
-                    <div className="w-24 h-24 bg-neutral-100 rounded-xl flex items-center justify-center">
-                      <img src="https://placehold.co/75x53" alt={item.product_name} className="w-20 h-14 object-contain" />
+                    <div className="w-24 h-24 bg-neutral-100 rounded-xl flex items-center justify-center overflow-hidden">
+                      {/* Pulls in dynamically spread image_url from the Context payload */}
+                      <img 
+                        src={item.image_url || "https://placehold.co/75x53"} 
+                        alt={item.product_name} 
+                        className="w-full h-full object-cover" 
+                      />
                     </div>
                     <div className="flex-1">
                       <p className="text-xl font-medium text-black">{item.product_name}</p>
@@ -347,7 +342,6 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              {/* Voucher */}
               <div className="flex gap-3 mb-6">
                 <input
                   type="text"
@@ -363,7 +357,6 @@ export default function CheckoutPage() {
                 </Button>
               </div>
 
-              {/* Summary */}
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-xl font-medium text-black">
                   <span>Shipping</span>
