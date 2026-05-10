@@ -109,7 +109,10 @@ exports.getProductById = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
     try {
-        const { product_name, description, price, category, rating, reviews, image_url, initial_stock } = req.body;
+        // Accept both 'name' and 'product_name', 'stock' and 'initial_stock'
+        const product_name = req.body.product_name || req.body.name;
+        const { description, price, category, rating, reviews, image_url } = req.body;
+        const initial_stock = req.body.initial_stock || req.body.stock;
 
         if (!product_name || !price || !category) {
             return res.status(400).json({ message: "Product name, price, and category are required." });
