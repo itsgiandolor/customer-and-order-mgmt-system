@@ -70,6 +70,7 @@ export default function CheckoutPage() {
         quantity: item.quantity,
         price: item.price,
       })),
+      shipping_fee: shipping,
     };
 
     const orderResponse = await apiClient.post('/orders', orderData);

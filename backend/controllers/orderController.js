@@ -22,7 +22,7 @@ exports.createOrder = async (req, res) => {
         }
 
         // 🔥 1. Fetch inventory data
-        const inventoryRes = await fetch("https://inventory-subsystem-api.onrender.com/api/inventory");
+        const inventoryRes = await fetch(`${process.env.INVENTORY_API_URL}/api/inventory`);
         const inventoryData = await inventoryRes.json();
 
         // 🔥 2. Check stock for EACH item
@@ -51,10 +51,8 @@ exports.createOrder = async (req, res) => {
             subtotal: item.quantity * item.price,
         }));
 
-        const total_amount = computedItems.reduce(
-            (sum, item) => sum + item.subtotal,
-            0
-        );
+        const shipping_fee = req.body.shipping_fee || 0;
+        const total_amount = computedItems.reduce((sum, item) => sum + item.subtotal, 0) + shipping_fee;
 
         // 🔥 4. Create order
         const order = await Order.create({
