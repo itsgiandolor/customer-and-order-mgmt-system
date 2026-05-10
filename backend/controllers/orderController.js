@@ -22,33 +22,13 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ message: "Customer information and items are required." });
         }
 
-        // 🔥 1. Fetch inventory data
+        // 🔥 1. Check stock
         const stockCheck = await checkStock(items);
         if (!stockCheck.ok) {
             return res.status(400).json({ message: stockCheck.message, available: stockCheck.available });
         }
 
-        // 🔥 2. Check stock for EACH item
-        for (const item of items) {
-            const inventoryItem = inventoryData.find(
-                (inv) => inv.product_id === item.product_id
-            );
-
-            if (!inventoryItem) {
-                return res.status(400).json({
-                    message: `Product ${item.product_id} not found in inventory`
-                });
-            }
-
-            if (inventoryItem.current_stock < item.quantity) {
-                return res.status(400).json({
-                    message: `Not enough stock for ${item.product_id}`,
-                    available: inventoryItem.current_stock
-                });
-            }
-        }
-
-        // 🔥 3. Compute totals (only AFTER stock is valid)
+        // 🔥 2. Compute totals (only AFTER stock is valid)
         const computedItems = items.map((item) => ({
             ...item,
             subtotal: item.quantity * item.price,
@@ -57,7 +37,7 @@ exports.createOrder = async (req, res) => {
         const shipping_fee = req.body.shipping_fee || 0;
         const total_amount = computedItems.reduce((sum, item) => sum + item.subtotal, 0) + shipping_fee;
 
-        // 🔥 4. Create order
+        // 🔥 3. Create order
         const order = await Order.create({
             order_id: generateOrderId(),
             customer_info,
