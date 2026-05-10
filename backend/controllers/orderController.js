@@ -1,4 +1,5 @@
 const Order = require("../models/Order");
+const { checkStock } = require('../services/inventoryService');
 
 // In-memory fallback when MongoDB is not available
 let memoryOrders = [];
@@ -22,8 +23,10 @@ exports.createOrder = async (req, res) => {
         }
 
         // 🔥 1. Fetch inventory data
-        const inventoryRes = await fetch(`${process.env.INVENTORY_API_URL}/api/inventory`);
-        const inventoryData = await inventoryRes.json();
+        const stockCheck = await checkStock(items);
+        if (!stockCheck.ok) {
+            return res.status(400).json({ message: stockCheck.message, available: stockCheck.available });
+        }
 
         // 🔥 2. Check stock for EACH item
         for (const item of items) {

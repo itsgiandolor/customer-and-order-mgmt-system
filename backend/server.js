@@ -8,7 +8,12 @@ connectDB();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://customer-and-order-mgmt-system.vercel.app',
+    'http://localhost:3000',
+  ],
+}));
 app.use(express.json());
 
 app.get("/", (req, res) => {
