@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { Button, Card } from "@heroui/react";
 import apiClient from '../../api/axiosConfig';
@@ -36,17 +38,21 @@ const orderStatusSteps = [
   { status: "Delivered", label: "Delivered", icon: "🏠" },
 ];
 
-export default function TrackOrderPage() {
+function TrackOrderPageInner() {
   const [contactNumber, setContactNumber] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const searchParams = useSearchParams();
 
-  // Load from localStorage on mount
+  // Load from URL params on mount, fallback to localStorage
   useEffect(() => {
-    const savedContact = localStorage.getItem('customerContact');
+    const urlContact = searchParams.get('contact');
+    const urlOrderId = searchParams.get('order_id');
+    const savedContact = urlContact || localStorage.getItem('customerContact');
+
     if (savedContact) {
       setContactNumber(savedContact);
       fetchOrders(savedContact);
@@ -144,7 +150,7 @@ export default function TrackOrderPage() {
                 type="text"
                 value={contactNumber}
                 onChange={(e) => setContactNumber(e.target.value)}
-                placeholder="e.g., +917xxxxxxx"
+                placeholder="e.g., 09171234567"
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-indigo-500"
               />
             </div>
@@ -408,5 +414,13 @@ export default function TrackOrderPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TrackOrderPage() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center">Loading...</div>}>
+      <TrackOrderPageInner />
+    </Suspense>
   );
 }
