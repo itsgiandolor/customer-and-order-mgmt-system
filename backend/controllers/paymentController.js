@@ -2,8 +2,9 @@ const Payment = require("../models/Payment");
 const Order = require("../models/Order");
 const { deductStock } = require('../services/inventoryService');
 const { processDelivery } = require('../services/deliveryService');
+const { randomUUID } = require('crypto');
 
-const generatePaymentId = () => "PAY-" + Date.now();
+const generatePaymentId = () => "PAY-" + randomUUID().split('-')[0].toUpperCase();
 
 // POST /api/payments/confirm
 exports.confirmPayment = async (req, res) => {
@@ -24,6 +25,11 @@ exports.confirmPayment = async (req, res) => {
 
         const order = await Order.findOne({ order_id });
         if (!order) return res.status(404).json({ message: "Order not found." });
+
+        // Prevent double payment
+        if (order.payment_status === 'Confirmed') {
+            return res.status(409).json({ message: 'This order has already been paid.' });
+        }
 
         if (Number(payment_amount) !== Number(order.total_amount)) {
             return res.status(400).json({
@@ -50,6 +56,30 @@ exports.confirmPayment = async (req, res) => {
             payment_date: new Date(),
         });
 
+        // ─── COD (Cash on Delivery) Handling ───────────────────────────────────
+        if (payment_method === 'COD') {
+            // For COD: don't deduct stock yet, but still send to delivery
+            // Stock is deducted when delivery confirms receipt
+            order.payment_status = 'Pending';
+            order.order_status = 'Confirmed';
+            await order.save();
+
+            try {
+                await processDelivery(order);
+                order.order_status = 'Ready for Fulfillment';
+                await order.save();
+            } catch (err) {
+                console.error('[Delivery Service error - COD]', err.message);
+            }
+
+            return res.status(201).json({
+                message: 'COD order confirmed. Payment to be collected on delivery.',
+                payment,
+                order,
+            });
+        }
+
+        // ─── Non-COD Payment Processing ───────────────────────────────────────
         order.payment_status = finalPaymentStatus;
         if (finalPaymentStatus === "Confirmed") {
             order.order_status = "Confirmed";

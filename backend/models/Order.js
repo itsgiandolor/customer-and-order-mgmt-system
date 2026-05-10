@@ -25,11 +25,6 @@ const orderItemSchema = new mongoose.Schema(
             required: true,
             min: 0,
         },
-        shipping_fee: {
-            type: Number,
-            default: 0,
-            min: 0,
-        },
     },
     { _id: false }
 );
@@ -70,6 +65,12 @@ const orderSchema = new mongoose.Schema(
         items: {
             type: [orderItemSchema],
             required: true,
+        },
+
+        shipping_fee: {
+            type: Number,
+            default: 0,
+            min: 0,
         },
 
         total_amount: {

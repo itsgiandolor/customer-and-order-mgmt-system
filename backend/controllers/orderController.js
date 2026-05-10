@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const { checkStock } = require('../services/inventoryService');
+const { randomUUID } = require('crypto');
 
 // In-memory fallback when MongoDB is not available
 let memoryOrders = [];
@@ -10,7 +11,7 @@ const isMongoConnected = () => {
 };
 
 const generateOrderId = () => {
-    return "ORD-" + Date.now();
+    return "ORD-" + randomUUID().split('-')[0].toUpperCase();
 };
 
 
@@ -23,7 +24,14 @@ exports.createOrder = async (req, res) => {
         }
 
         // 🔥 1. Check stock
-        const stockCheck = await checkStock(items);
+        let stockCheck;
+        try {
+            stockCheck = await checkStock(items);
+        } catch (err) {
+            return res.status(503).json({
+                message: 'Inventory service is currently unavailable. Please try again.',
+            });
+        }
         if (!stockCheck.ok) {
             return res.status(400).json({ message: stockCheck.message, available: stockCheck.available });
         }
@@ -43,6 +51,7 @@ exports.createOrder = async (req, res) => {
             customer_info,
             order_source,
             items: computedItems,
+            shipping_fee,
             total_amount,
             payment_status: "Pending",
             order_status: "Processing",

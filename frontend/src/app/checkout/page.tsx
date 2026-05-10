@@ -78,7 +78,7 @@ export default function CheckoutPage() {
         order_id: orderId,
         payment_method: paymentMethod,  // from your state
         payment_amount: orderTotal,
-        payment_status: 'Confirmed',
+        payment_status: paymentMethod === 'COD' ? 'Pending' : 'Confirmed',
         transaction_reference: 'TXN-' + Date.now(), // real gateway provides this
       };
 
