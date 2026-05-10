@@ -109,7 +109,7 @@ exports.getProductById = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
     try {
-        const { product_name, description, price, category, rating, reviews, image_url } = req.body;
+        const { product_name, description, price, category, rating, reviews, image_url, initial_stock } = req.body;
 
         if (!product_name || !price || !category) {
             return res.status(400).json({ message: "Product name, price, and category are required." });
@@ -125,6 +125,22 @@ exports.createProduct = async (req, res) => {
             reviews: reviews || "0",
             image_url: image_url || "https://placehold.co/300x200",
         });
+
+        // Register in Inventory with default stock
+        try {
+            await fetch(`${process.env.INVENTORY_API_URL}/api/inventory/update`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    product_id: product.product_id,
+                    current_stock: initial_stock || 50,
+                }),
+            });
+            console.log(`[Inventory] Registered ${product.product_id}`);
+        } catch (err) {
+            console.warn(`[Inventory] Failed to register ${product.product_id}:`, err.message);
+            // Don't fail the product creation — just log it
+        }
 
         res.status(201).json({
             message: "Product created successfully.",
@@ -174,9 +190,40 @@ exports.deleteProduct = async (req, res) => {
     }
 };
 
+exports.deactivateProduct = async (req, res) => {
+    try {
+        const product = await Product.findOneAndUpdate(
+            { product_id: req.params.product_id },
+            { is_active: false },
+            { new: true }
+        );
+
+        if (!product) return res.status(404).json({ message: "Product not found." });
+
+        // Set stock to 0 in Inventory so it doesn't appear available
+        try {
+            await fetch(`${process.env.INVENTORY_API_URL}/api/inventory/update`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    product_id: product.product_id,
+                    current_stock: 0,
+                }),
+            });
+            console.log(`[Inventory] Deactivated ${product.product_id}`);
+        } catch (err) {
+            console.warn(`[Inventory] Failed to deactivate ${product.product_id}:`, err.message);
+        }
+
+        res.status(200).json({ message: "Product deactivated.", product });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 exports.seedProducts = async (req, res) => {
     try {
-        const sampleProducts = [
+        const products = [
             { product_id: "P001", product_name: "HAVIT HV-G92 Gamepad", description: "Gaming controller with high precision", price: 200, category: "Electronics", rating: 5.0, reviews: "1.5k" },
             { product_id: "P002", product_name: "Demonia High Boots", description: "Gothic platform boots", price: 6500, category: "Clothing & Apparel", rating: 5.0, reviews: "1.5k" },
             { product_id: "P003", product_name: "Graduation Gown", description: "Academic regalia for ceremonies", price: 1500, category: "Clothing & Apparel", rating: 5.0, reviews: "1.5k" },
@@ -185,20 +232,102 @@ exports.seedProducts = async (req, res) => {
             { product_id: "P006", product_name: "Coffee Table", description: "Modern minimalist design", price: 3200, category: "Home & Living", rating: 4.7, reviews: "450" },
         ];
 
-        if (!isMongoConnected()) {
-            memoryProducts = sampleProducts.map(p => ({ ...p, image_url: "https://placehold.co/300x200", is_active: true }));
-            return res.status(200).json({
-                message: "Sample products loaded to memory (MongoDB not connected).",
-                count: sampleProducts.length,
+        // 1. Upsert into your own DB (if MongoDB is connected)
+        if (isMongoConnected()) {
+            for (const product of products) {
+                await Product.findOneAndUpdate(
+                    { product_id: product.product_id },
+                    { ...product, image_url: "https://placehold.co/300x200", is_active: true },
+                    { upsert: true, new: true }
+                );
+            }
+        }
+
+        // 2. Always update memoryProducts as fallback
+        memoryProducts = products.map(p => ({ ...p, image_url: "https://placehold.co/300x200", is_active: true }));
+
+        // 3. Register each product in the Inventory system
+        const inventoryResults = { success: [], failed: [] };
+
+        for (const product of products) {
+            try {
+                const invRes = await fetch(`${process.env.INVENTORY_API_URL}/api/inventory/update`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        product_id: product.product_id,
+                        current_stock: 50, // default starting stock
+                    }),
+                });
+
+                if (invRes.ok) {
+                    inventoryResults.success.push(product.product_id);
+                } else {
+                    inventoryResults.failed.push(product.product_id);
+                }
+            } catch (err) {
+                inventoryResults.failed.push(product.product_id);
+                console.warn(`[Inventory] Failed to sync ${product.product_id}:`, err.message);
+            }
+        }
+
+        return res.status(200).json({
+            message: "Products seeded successfully.",
+            products_count: products.length,
+            inventory_sync: inventoryResults,
+        });
+
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.checkInventorySync = async (req, res) => {
+    try {
+        // Your products
+        const products = await Product.find({ is_active: true }).select("product_id product_name");
+
+        // Their inventory
+        let inventory = [];
+        try {
+            const invRes = await fetch(`${process.env.INVENTORY_API_URL}/api/inventory`);
+            if (invRes.ok) {
+                inventory = await invRes.json();
+            }
+        } catch (err) {
+            console.warn('[Inventory API unavailable for sync check]', err.message);
+            return res.status(503).json({
+                message: 'Inventory API is unavailable. Cannot perform sync check.',
             });
         }
 
-        await Product.deleteMany({});
-        await Product.insertMany(sampleProducts);
+        // Compare
+        const synced = [];
+        const missing = []; // in your DB but not in Inventory
+
+        for (const product of products) {
+            const found = inventory.find(i => i.product_id === product.product_id);
+            if (found) {
+                synced.push({
+                    product_id: product.product_id,
+                    product_name: product.product_name,
+                    current_stock: found.current_stock,
+                    status: found.status,
+                });
+            } else {
+                missing.push({
+                    product_id: product.product_id,
+                    product_name: product.product_name,
+                });
+            }
+        }
 
         res.status(200).json({
-            message: "Sample products seeded successfully.",
-            count: sampleProducts.length,
+            total_your_products: products.length,
+            total_inventory_records: inventory.length,
+            synced_count: synced.length,
+            missing_from_inventory: missing,
+            synced,
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
