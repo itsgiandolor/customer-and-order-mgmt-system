@@ -40,38 +40,64 @@ export default function CheckoutPage() {
   };
 
   const handleSubmit = async () => {
-    if (!agreedToTerms) {
-      alert('Please agree to the data processing terms');
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const orderData = {
-        customer_info: {
-          name: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          contact_number: formData.phone,
-          delivery_address: `${formData.address}, ${formData.city}, ${formData.region} ${formData.zipCode}`,
-        },
-        order_source: 'web',
-        items: cart.map(item => ({
-          product_id: item.product_id,
-          product_name: item.product_name,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-      };
-      
-      const response = await apiClient.post('/orders', orderData);
-      alert('Order placed successfully! Order ID: ' + response.data.order.order_id);
-      clearCart();
-    } catch (error) {
-      alert('Failed to place order. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // --- Validation ---
+  if (!agreedToTerms) { alert('Please agree to the data processing terms'); return; }
+  if (!formData.firstName || !formData.lastName || !formData.phone || !formData.email) {
+    alert('Please fill in all personal information fields.'); return;
+  }
+  if (!formData.region || !formData.city || !formData.address || !formData.zipCode) {
+    alert('Please fill in all shipping information fields.'); return;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(formData.email)) { alert('Please enter a valid email address.'); return; }
+  const phoneRegex = /^(09|\+639)\d{9}$/;
+  if (!phoneRegex.test(formData.phone)) { alert('Please enter a valid Philippine phone number (e.g. 09171234567).'); return; }
+
+  setLoading(true);
+  try {
+    // STEP 1: Create the order (this also checks inventory)
+    const orderData = {
+      customer_info: {
+        name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
+        contact_number: formData.phone,
+        delivery_address: `${formData.address}, ${formData.city}, ${formData.region} ${formData.zipCode}`,
+      },
+      order_source: 'web',
+      items: cart.map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    };
+
+    const orderResponse = await apiClient.post('/orders', orderData);
+    const orderId = orderResponse.data.order.order_id;
+    const orderTotal = orderResponse.data.order.total_amount;
+
+    // STEP 2: Confirm payment (simulate for now; replace with real gateway later)
+    const paymentData = {
+      order_id: orderId,
+      payment_method: paymentMethod,  // from your state
+      payment_amount: orderTotal,
+      payment_status: 'Confirmed',
+      transaction_reference: 'TXN-' + Date.now(), // real gateway provides this
+    };
+
+    await apiClient.post('/payments/confirm', paymentData);
+
+    clearCart();
+    // Redirect to a success page with the order ID
+    window.location.href = `/track?order_id=${orderId}&contact=${encodeURIComponent(formData.phone)}`;
+
+  } catch (error: any) {
+    const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
+    alert(msg);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (cart.length === 0) {
     return (

@@ -12,7 +12,6 @@ const generateOrderId = () => {
     return "ORD-" + Date.now();
 };
 
-const fetch = require("node-fetch"); // if not using Node 18+
 
 exports.createOrder = async (req, res) => {
     try {
