@@ -10,7 +10,7 @@ const app = express();
 
 app.use(cors({
   origin: [
-    'https://customer-and-order-mgmt-system.vercel.app',
+    'https://customer-and-order-mgmt-system-five.vercel.app',
     'http://localhost:3000',
   ],
 }));
