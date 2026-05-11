@@ -125,26 +125,6 @@ exports.confirmPayment = async (req, res) => {
     }
 };
 
-// ─── Delivery Service ─────────────────────────────────────────────────
-try {
-    await processDelivery(order);
-    order.order_status = "Ready for Fulfillment";
-    await order.save();
-} catch (err) {
-    console.error("[Delivery Service error]", err.message);
-}
-
-// ─── Return response ───────────────────────────────────────────────────
-return res.status(201).json({
-    message: "Payment confirmed. Order is being processed for fulfillment.",
-    payment,
-    order,
-});
-    } catch (error) {
-    res.status(500).json({ message: error.message });
-}
-};
-
 // GET /api/payments
 exports.getPayments = async (req, res) => {
     try {
