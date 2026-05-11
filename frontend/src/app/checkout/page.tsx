@@ -64,7 +64,7 @@ export default function CheckoutPage() {
         newErrors.lastName = value.trim() ? '' : 'Last name is required';
         break;
       case 'phone':
-        if (!/^(09|\+639)\d{9}$/.test(value)) {
+        if (!/^(09|\+639)\d{9}$/.test(value.replace(/\s/g, ''))) {
           newErrors.phone = 'Invalid Philippine phone number (e.g. 09171234567)';
         } else {
           newErrors.phone = '';
@@ -103,7 +103,7 @@ export default function CheckoutPage() {
       formData.firstName.trim() &&
       formData.lastName.trim() &&
       formData.phone.trim() &&
-      /^(09|\+639)\d{9}$/.test(formData.phone) &&
+      /^(09|\+639)\d{9}$/.test(formData.phone.replace(/\s/g, '')) &&
       formData.email.trim() &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
       formData.region.trim() &&
@@ -116,7 +116,7 @@ export default function CheckoutPage() {
 
     // Add payment phone validation for GCash/Maya
     if (paymentMethod === 'GCash' || paymentMethod === 'Maya') {
-      return baseValid && paymentPhone.trim() && /^(09|\+639)\d{9}$/.test(paymentPhone);
+      return baseValid && paymentPhone.trim() && /^(09|\+639)\d{9}$/.test(paymentPhone.replace(/\s/g, ''));
     }
 
     return baseValid;
@@ -129,7 +129,7 @@ export default function CheckoutPage() {
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
-    else if (!/^(09|\+639)\d{9}$/.test(formData.phone)) newErrors.phone = 'Invalid Philippine phone number (e.g. 09171234567)';
+    else if (!/^(09|\+639)\d{9}$/.test(formData.phone.replace(/\s/g, ''))) newErrors.phone = 'Invalid Philippine phone number (e.g. 09171234567)';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email address';
 
@@ -143,7 +143,7 @@ export default function CheckoutPage() {
     let paymentPhoneErr = '';
     if ((paymentMethod === 'GCash' || paymentMethod === 'Maya') && !paymentPhone.trim()) {
       paymentPhoneErr = `${paymentMethod} number is required`;
-    } else if ((paymentMethod === 'GCash' || paymentMethod === 'Maya') && !/^(09|\+639)\d{9}$/.test(paymentPhone)) {
+    } else if ((paymentMethod === 'GCash' || paymentMethod === 'Maya') && !/^(09|\+639)\d{9}$/.test(paymentPhone.replace(/\s/g, ''))) {
       paymentPhoneErr = `Invalid ${paymentMethod} number`;
     }
     setPaymentPhoneError(paymentPhoneErr);
@@ -184,7 +184,7 @@ export default function CheckoutPage() {
         order_id: orderId,
         payment_method: paymentMethod,
         payment_amount: orderTotal,
-        phone_number: paymentMethod === 'COD' ? null : paymentPhone,
+        phone_number: paymentMethod === 'COD' ? null : paymentPhone.replace(/\s/g, ''),
       };
 
       await apiClient.post('/payments/confirm', paymentData);
@@ -207,12 +207,14 @@ export default function CheckoutPage() {
 
   if (checkoutItems.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <nav className="bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-5">
-          <div className="flex items-center justify-between max-w-480 mx-auto">
-            <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
-              KAM<span className="text-indigo-500">S</span>
-            </Link>
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <nav className="sticky top-0 z-50 bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-4 shadow-lg">
+          <div className="flex items-center justify-between max-w-[1920px] mx-auto">
+            <div className="flex items-center gap-8 lg:gap-52">
+              <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
+                KAM<span className="text-indigo-500">S</span>
+              </Link>
+            </div>
           </div>
         </nav>
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
@@ -461,7 +463,7 @@ export default function CheckoutPage() {
                     value={paymentPhone}
                     onChange={(e) => {
                       setPaymentPhone(e.target.value);
-                      if (e.target.value && !/^(09|\+639)\d{9}$/.test(e.target.value)) {
+                      if (e.target.value && !/^(09|\+639)\d{9}$/.test(e.target.value.replace(/\s/g, ''))) {
                         setPaymentPhoneError('Invalid phone number');
                       } else {
                         setPaymentPhoneError('');
@@ -545,8 +547,11 @@ export default function CheckoutPage() {
 
               <Button
                 onClick={handleSubmit}
-                isDisabled={loading || !isFormValid()}
-                className="w-full bg-indigo-500 text-white text-xl font-medium py-4 h-12 rounded-lg data-[disabled=true]:bg-gray-400"
+                disabled={loading || !isFormValid()}
+                className={`w-full text-white text-xl font-medium py-4 h-12 rounded-lg font-semibold ${loading || !isFormValid()
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-indigo-500 hover:bg-indigo-600'
+                  }`}
               >
                 {loading ? 'Processing...' : 'Pay and Place Order'}
               </Button>

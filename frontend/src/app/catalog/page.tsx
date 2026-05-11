@@ -10,11 +10,11 @@ import { useCart } from '../../context/CartContext';
 function useSafeCartCount() {
   const [count, setCount] = useState(0);
   const { cart } = useCart();
-  
+
   useEffect(() => {
     setCount(cart.reduce((sum, item) => sum + item.quantity, 0));
   }, [cart]);
-  
+
   return count;
 }
 
@@ -45,8 +45,8 @@ export default function ProductCatalog() {
       setLoading(true);
       try {
         // Utilizing the backend's ?category query parameter
-        const endpoint = selectedCategory 
-          ? `/products?category=${encodeURIComponent(selectedCategory)}` 
+        const endpoint = selectedCategory
+          ? `/products?category=${encodeURIComponent(selectedCategory)}`
           : '/products';
         const response = await apiClient.get(endpoint);
         setProducts(response.data);
@@ -123,7 +123,7 @@ export default function ProductCatalog() {
         <aside className="hidden md:block w-64 shrink-0 bg-gray-50 border-r border-gray-200 p-6 sticky top-[72px] h-fit">
           <h2 className="text-xl font-bold text-slate-800 mb-4">Categories</h2>
           <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4">
-            <div 
+            <div
               className={`font-semibold cursor-pointer flex items-center gap-2 mb-4 pb-3 border-b border-gray-100 ${!selectedCategory ? 'text-indigo-600' : 'text-slate-800'}`}
               onClick={() => setSelectedCategory(null)}
             >
@@ -131,7 +131,7 @@ export default function ProductCatalog() {
             </div>
             <ul className="space-y-3 pl-2 text-sm font-medium">
               {categories.map(cat => (
-                <li 
+                <li
                   key={cat}
                   onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
                   className={`cursor-pointer transition flex items-center gap-2 ${selectedCategory === cat ? 'text-indigo-600 font-bold' : 'text-slate-600 hover:text-indigo-600'}`}
@@ -153,7 +153,8 @@ export default function ProductCatalog() {
                 Cart: {totalItems} items
               </Link>
               <Link
-                href={cart.length === 0 ? "#" : "/checkout"}
+                href="/checkout"
+                onClick={(e) => cart.length === 0 && e.preventDefault()}
                 className={`inline-flex items-center px-4 py-2 rounded-lg font-bold shadow-md shadow-indigo-200 ${cart.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white'}`}
               >
                 Checkout ↗
@@ -170,74 +171,74 @@ export default function ProductCatalog() {
               </div>
             ) : error ? (
               <div className="flex items-center justify-center py-12 text-red-500">{error}</div>
-            ) : products.filter(p => 
-                searchQuery === '' || 
-                p.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                p.description?.toLowerCase().includes(searchQuery.toLowerCase())
-              ).length === 0 ? (
+            ) : products.filter(p =>
+              searchQuery === '' ||
+              p.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              p.description?.toLowerCase().includes(searchQuery.toLowerCase())
+            ).length === 0 ? (
               <div className="flex items-center justify-center py-12 text-slate-500">
                 {searchQuery ? `No products found for "${searchQuery}"` : 'No products found in this category.'}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {products
-                  .filter(product => 
-                    searchQuery === '' || 
+                  .filter(product =>
+                    searchQuery === '' ||
                     product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     product.description?.toLowerCase().includes(searchQuery.toLowerCase())
                   )
                   .map((product) => (
-                  <div key={product.product_id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col" >
+                    <div key={product.product_id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col" >
 
-                    {/* Image Area mapped to Backend image_url */}
-                    <Link href={`/products/${product.product_id}`} className="relative aspect-square bg-slate-50 rounded-lg mb-4 flex items-center justify-center overflow-hidden cursor-pointer">
-                      <img 
-                        src={product.image_url || 'https://placehold.co/300x200'} 
-                        alt={product.product_name} 
-                        className="w-full h-full object-cover"
-                      />
-                    </Link>
+                      {/* Image Area mapped to Backend image_url */}
+                      <Link href={`/products/${product.product_id}`} className="relative aspect-square bg-slate-50 rounded-lg mb-4 flex items-center justify-center overflow-hidden cursor-pointer">
+                        <img
+                          src={product.image_url || 'https://placehold.co/300x200'}
+                          alt={product.product_name}
+                          className="w-full h-full object-cover"
+                        />
+                      </Link>
 
-                    <h3 className="font-bold text-slate-800 text-lg mb-1 truncate" title={product.product_name}>
-                      {product.product_name}
-                    </h3>
-                    
-                    {/* Surfaced the product description from the backend schema */}
-                    <p className="text-xs text-slate-500 mb-2 line-clamp-2" title={product.description}>
-                      {product.description}
-                    </p>
+                      <h3 className="font-bold text-slate-800 text-lg mb-1 truncate" title={product.product_name}>
+                        {product.product_name}
+                      </h3>
 
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1">
-                        <span className="text-amber-400 text-xs">★</span>
-                        <span className="text-xs text-slate-600 font-medium">{product.rating} <span className="text-slate-400 font-normal">({product.reviews} Ratings)</span></span>
+                      {/* Surfaced the product description from the backend schema */}
+                      <p className="text-xs text-slate-500 mb-2 line-clamp-2" title={product.description}>
+                        {product.description}
+                      </p>
+
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-amber-400 text-xs">★</span>
+                          <span className="text-xs text-slate-600 font-medium">{product.rating} <span className="text-slate-400 font-normal">({product.reviews} Ratings)</span></span>
+                        </div>
+                        <p className="text-xl font-extrabold text-indigo-600">₱{product.price}</p>
                       </div>
-                      <p className="text-xl font-extrabold text-indigo-600">₱{product.price}</p>
-                    </div>
 
-                    <div className="mb-2">
-                      {getStockBadge(product.stock_status, product.current_stock)}
-                    </div>
+                      <div className="mb-2">
+                        {getStockBadge(product.stock_status, product.current_stock)}
+                      </div>
 
-                    <div className="mt-auto flex justify-center gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => addToCart(product)}
-                        isDisabled={product.stock_status === 'ERROR' || product.current_stock === 0}
-                        className="font-semibold text-xs border-2 border-slate-300 bg-slate-100 text-slate-700 hover:bg-white hover:border-slate-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex-[1.5]"
-                      >
-                        Add to Cart
-                      </Button>
-                      <Button
-                        onClick={() => { addToCart(product); window.location.href = '/checkout'; }}
-                        isDisabled={product.stock_status === 'ERROR' || product.current_stock === 0}
-                        className="font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex-1"
-                      >
-                        Buy Now
-                      </Button>
+                      <div className="mt-auto flex justify-center gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => addToCart(product)}
+                          isDisabled={product.stock_status === 'ERROR' || product.current_stock === 0}
+                          className="font-semibold text-xs border-2 border-slate-300 bg-slate-100 text-slate-700 hover:bg-white hover:border-slate-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex-[1.5]"
+                        >
+                          Add to Cart
+                        </Button>
+                        <Button
+                          onClick={() => { addToCart(product); window.location.href = '/checkout'; }}
+                          isDisabled={product.stock_status === 'ERROR' || product.current_stock === 0}
+                          className="font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+                        >
+                          Buy Now
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>
