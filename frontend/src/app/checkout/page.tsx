@@ -547,10 +547,10 @@ export default function CheckoutPage() {
 
               <Button
                 onClick={handleSubmit}
-                disabled={loading || !isFormValid()}
+                isDisabled={loading || !isFormValid()}
                 className={`w-full text-white text-xl font-medium py-4 h-12 rounded-lg font-semibold ${loading || !isFormValid()
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-indigo-500 hover:bg-indigo-600'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-indigo-500 hover:bg-indigo-600'
                   }`}
               >
                 {loading ? 'Processing...' : 'Pay and Place Order'}
