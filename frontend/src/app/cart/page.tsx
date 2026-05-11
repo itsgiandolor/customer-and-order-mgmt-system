@@ -10,8 +10,9 @@ export default function CartPage() {
   const [voucher, setVoucher] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
-  const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
-  const discount = subtotal > 0 ? subtotal * 0.1 : 0;
+  const selectedCartItems = cart.filter(item => selectedItems.includes(item.product_id));
+  const subtotal = selectedCartItems.reduce((sum, item) => sum + item.subtotal, 0);
+  const discount = 0;
   const total = subtotal - discount;
 
   const toggleItemSelection = (id: string) => {
@@ -29,18 +30,18 @@ export default function CartPage() {
   if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <nav className="bg-slate-800 border-b border-white/30 px-14 py-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-52">
-              <Link href="/" className="text-4xl font-bold text-white">
+        {/* Sticky Navigation Bar */}
+        <nav className="sticky top-0 z-50 bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-4 shadow-lg">
+          <div className="flex items-center justify-between max-w-[1920px] mx-auto">
+            <div className="flex items-center gap-8 lg:gap-52">
+              <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
                 KAM<span className="text-indigo-500">S</span>
               </Link>
-              <div className="flex items-center gap-24">
-                <Link href="/catalog" className="text-white text-xl">Shop</Link>
-                <Link href="/track" className="text-white text-xl">Track Order</Link>
-                <Link href="/cart" className="text-white text-xl font-semibold">Cart</Link>
-                <Link href="#" className="text-white text-xl">About Us</Link>
+              <div className="hidden md:flex items-center gap-6 lg:gap-24">
+                <Link href="/catalog" className="text-white text-base lg:text-xl">Shop</Link>
+                <Link href="/cart" className="text-white text-base lg:text-xl font-semibold">Cart</Link>
+                <Link href="/track" className="text-white text-base lg:text-xl">Track Order</Link>
+                <Link href="#" className="text-white text-base lg:text-xl">About Us</Link>
               </div>
             </div>
           </div>
@@ -62,70 +63,58 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <nav className="bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-5">
-        <div className="flex items-center justify-between max-w-[1920px] mx-auto">
-          <div className="flex items-center gap-8 lg:gap-52">
-            <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
-              KAM<span className="text-indigo-500">S</span>
-            </Link>
-            <div className="hidden md:flex items-center gap-6 lg:gap-24">
-              <Link href="/catalog" className="text-white text-base lg:text-xl">Shop</Link>
-              <Link href="/track" className="text-white text-base lg:text-xl">Track Order</Link>
-              <Link href="/cart" className="text-white text-base lg:text-xl font-semibold">Cart</Link>
-              <Link href="#" className="text-white text-base lg:text-xl">About Us</Link>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden lg:block w-[400px] xl:w-[542px] bg-neutral-100 rounded-lg px-4 py-2">
-              <div className="flex items-center justify-between">
-                <span className="text-black/50 text-lg">What are you looking for?</span>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+        {/* Sticky Navigation Bar */}
+        <nav className="sticky top-0 z-50 bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-4 shadow-lg">
+          <div className="flex items-center justify-between max-w-[1920px] mx-auto">
+            <div className="flex items-center gap-8 lg:gap-52">
+              <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
+                KAM<span className="text-indigo-500">S</span>
+              </Link>
+              <div className="hidden md:flex items-center gap-6 lg:gap-24">
+                <Link href="/catalog" className="text-white text-base lg:text-xl">Shop</Link>
+                <Link href="/cart" className="text-white text-base lg:text-xl font-semibold">Cart</Link>
+                <Link href="/track" className="text-white text-base lg:text-xl">Track Order</Link>
+                <Link href="#" className="text-white text-base lg:text-xl">About Us</Link>
               </div>
             </div>
-            <div className="flex items-center gap-4 text-white">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
 
       {/* Main Content */}
-      <div className="max-w-[1920px] mx-auto px-4 lg:px-8 xl:px-20 py-8 lg:py-12">
-        <h1 className="text-3xl lg:text-4xl font-semibold text-black mb-8">Shopping Cart</h1>
+      <div className="max-w-[1920px] mx-auto px-6 py-4 lg:py-8">
+        <h1 className="text-3xl lg:text-4xl font-semibold text-black mb-6">Shopping Cart</h1>
 
         <div className="flex flex-col xl:flex-row gap-8">
           {/* Cart Items Table */}
           <Card className="flex-1 rounded-xl border border-black/50 shadow-none">
-            <div className="p-4 lg:p-8">
+            <div className="px-3 lg:px-4 pt-2">
               {/* Table Header */}
-              <div className="hidden lg:grid grid-cols-12 gap-4 pb-4 border-b border-black/50 text-2xl font-medium text-black">
-                <div className="col-span-6">Product</div>
+              <div className="hidden lg:grid grid-cols-12 gap-2 pb-2 border-b border-black/50 text-lg font-semibold text-black">
+                <div className="col-span-1"></div>
+                <div className="col-span-5">Product</div>
                 <div className="col-span-2 text-center">Quantity</div>
                 <div className="col-span-2 text-center">Total</div>
-                <div className="col-span-2 text-center">Action</div>
+                <div className="col-span-1 text-center">Action</div>
               </div>
 
               {/* Cart Items */}
               <div className="divide-y divide-black/20">
-                {cart.map((item) => (
-                  <div key={item.product_id} className="py-6 lg:py-8">
+                {cart.map((item, index) => (
+                  <div key={item.product_id} className={`py-3 lg:py-4 ${index === cart.length - 1 ? 'pb-0' : ''}`}>
                     {/* Mobile Layout */}
                     <div className="lg:hidden space-y-4">
                       <div className="flex items-center gap-4">
-                        <Checkbox 
-                          isSelected={selectedItems.includes(item.product_id)}
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(item.product_id)}
                           onChange={() => toggleItemSelection(item.product_id)}
+                          className="w-5 h-5 accent-indigo-500 cursor-pointer"
                         />
                         <div className="w-20 h-20 bg-neutral-100 rounded-xl flex items-center justify-center">
                           <img src="https://placehold.co/75x53" alt={item.product_name} className="w-16 h-12 object-contain" />
                         </div>
                         <div>
-                          <p className="font-medium text-black">{item.product_name}</p>
+                          <p className="font-bold text-black">{item.product_name}</p>
                           <p className="text-sm text-gray-500">Color: White</p>
                         </div>
                       </div>
@@ -134,17 +123,17 @@ export default function CartPage() {
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            className="rounded-r-none h-9 min-w-0 border-black/50"
+                            className="rounded-l-md rounded-r-none h-9 min-w-0 border-black/50"
                             onPress={() => handleQuantityChange(item.product_id, item.quantity - 1)}
                           >
                             -
                           </Button>
-                          <div className="w-16 h-9 flex items-center justify-center border-t border-b border-black/50 text-xl font-medium">
+                          <div className="w-10 h-9 flex items-center justify-center border-t border-b border-black/50 bg-white text-lg font-medium">
                             {item.quantity}
                           </div>
                           <Button 
                             size="sm" 
-                            className="rounded-l-none h-9 min-w-0 bg-indigo-500 text-white"
+                            className="rounded-r-md rounded-l-none h-9 min-w-0 bg-indigo-500 text-white"
                             onPress={() => handleQuantityChange(item.product_id, item.quantity + 1)}
                           >
                             +
@@ -163,19 +152,24 @@ export default function CartPage() {
                     </div>
 
                     {/* Desktop Layout */}
-                    <div className="hidden lg:grid grid-cols-12 gap-4 items-center">
-                      {/* Product */}
-                      <div className="col-span-6 flex items-center gap-6">
-                        <Checkbox 
-                          isSelected={selectedItems.includes(item.product_id)}
+                    <div className="hidden lg:grid grid-cols-12 gap-2 items-center">
+                      {/* Checkbox */}
+                      <div className="col-span-1 flex justify-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(item.product_id)}
                           onChange={() => toggleItemSelection(item.product_id)}
+                          className="w-5 h-5 accent-indigo-500 cursor-pointer"
                         />
-                        <div className="w-24 h-24 bg-neutral-100 rounded-xl flex items-center justify-center">
-                          <img src="https://placehold.co/75x53" alt={item.product_name} className="w-20 h-14 object-contain" />
+                      </div>
+                      {/* Product */}
+                      <div className="col-span-5 flex items-center gap-4">
+                        <div className="w-20 h-20 bg-neutral-100 rounded-xl flex items-center justify-center">
+                          <img src="https://placehold.co/75x53" alt={item.product_name} className="w-16 h-12 object-contain" />
                         </div>
                         <div>
-                          <p className="text-2xl font-medium text-black leading-tight">{item.product_name}</p>
-                          <p className="text-base font-light text-black">Color: White</p>
+                          <p className="text-lg font-bold text-black leading-tight">{item.product_name}</p>
+                          <p className="text-sm font-light text-black">Color: White</p>
                         </div>
                       </div>
 
@@ -185,19 +179,19 @@ export default function CartPage() {
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            className="rounded-r-none h-10 w-9 min-w-0 border-black/50"
+                            className="rounded-l-md rounded-r-none h-10 w-9 min-w-0 border-black/50"
                             onPress={() => handleQuantityChange(item.product_id, item.quantity - 1)}
                           >
                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                             </svg>
                           </Button>
-                          <div className="w-20 h-10 flex items-center justify-center border-t border-b border-black/50 text-xl font-medium">
+                          <div className="w-12 h-10 flex items-center justify-center border-t border-b border-black/50 bg-white text-lg font-medium text-black">
                             {item.quantity}
                           </div>
                           <Button 
                             size="sm" 
-                            className="rounded-l-none h-10 w-9 min-w-0 bg-indigo-500 text-white"
+                            className="rounded-r-md rounded-l-none h-10 w-9 min-w-0 bg-indigo-500 text-white"
                             onPress={() => handleQuantityChange(item.product_id, item.quantity + 1)}
                           >
                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -209,14 +203,14 @@ export default function CartPage() {
 
                       {/* Total */}
                       <div className="col-span-2 text-center">
-                        <p className="text-2xl font-semibold text-black">₱{item.subtotal.toLocaleString()}</p>
+                        <p className="text-xl font-semibold text-black">₱{item.subtotal.toLocaleString()}</p>
                       </div>
 
                       {/* Action */}
-                      <div className="col-span-2 flex justify-center">
+                      <div className="col-span-1 flex justify-center">
                         <button 
                           onClick={() => removeFromCart(item.product_id)}
-                          className="p-2 hover:bg-red-50 text-black hover:text-red-500 rounded-lg transition-colors"
+                          className="p-1 hover:bg-red-50 text-black hover:text-red-500 rounded-lg transition-colors"
                         >
                           <svg className="w-5 h-6" viewBox="0 0 20 24" fill="currentColor">
                             <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
@@ -231,7 +225,7 @@ export default function CartPage() {
           </Card>
 
           {/* Order Summary */}
-          <Card className="w-full xl:w-[501px] bg-indigo-500 rounded-xl border-none shadow-none">
+          <Card className="w-full xl:w-[420px] bg-indigo-500 rounded-xl border-none shadow-none shrink-0 self-start">
             <div className="p-6 lg:p-8 text-white">
               <h2 className="text-2xl font-medium mb-8">Order Summary</h2>
 
@@ -246,7 +240,7 @@ export default function CartPage() {
                 />
                 <Button 
                   variant="outline" 
-                  className="rounded-[20px] border-white text-white font-semibold px-6 hover:bg-white/10"
+                  className="rounded-[20px] border-white text-white font-semibold px-6 py-2 h-auto hover:bg-white/10"
                 >
                   Apply
                 </Button>
@@ -272,14 +266,20 @@ export default function CartPage() {
 
               {/* Total */}
               <div className="flex justify-between items-center mb-8">
-                <span className="text-xl font-medium">Total:</span>
+                <span className="text-xl font-medium">Total ({selectedItems.length} items):</span>
                 <span className="text-2xl font-semibold">₱{total.toLocaleString()}.00</span>
               </div>
 
               {/* Checkout Button */}
               <Link 
-                href="/checkout"
-                className="block w-full bg-white text-black font-semibold rounded-xl py-3 h-12 text-center leading-[48px]"
+                href={selectedItems.length > 0 ? `/checkout?selected=${selectedItems.join(',')}` : "#"}
+                onClick={(e) => {
+                  if (selectedItems.length === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one item to checkout');
+                  }
+                }}
+                className={`w-full font-semibold rounded-xl py-3 h-12 flex items-center justify-center ${selectedItems.length > 0 ? 'bg-white text-black' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
               >
                 Proceed to Checkout
               </Link>

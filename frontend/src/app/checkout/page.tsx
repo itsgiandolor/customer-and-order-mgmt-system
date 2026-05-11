@@ -2,19 +2,24 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button, Card, Checkbox } from "@heroui/react";
 import { useCart } from '../../context/CartContext';
 import apiClient from '../../api/axiosConfig';
 
 export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
+  const searchParams = useSearchParams();
+  const selectedIds = searchParams.get('selected')?.split(',') || [];
+  const checkoutItems = selectedIds.length > 0 
+    ? cart.filter(item => selectedIds.includes(item.product_id))
+    : cart;
   const [loading, setLoading] = useState(false);
   const [voucher, setVoucher] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('GCash');
   const [deliveryMethod, setDeliveryMethod] = useState('standard');
 
-  // Form state
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -25,33 +30,116 @@ export default function CheckoutPage() {
     address: '',
     zipCode: '',
   });
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
 
-  const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
+  const subtotal = checkoutItems.reduce((sum, item) => sum + item.subtotal, 0);
   const shipping = deliveryMethod === 'express' ? 90 : 0;
-  const discount = 0; // Calculate based on voucher
+  const discount = 0; 
   const total = subtotal + shipping - discount;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    // Real-time validation
+    validateField(name, value);
+  };
+
+  const validateField = (name: string, value: string) => {
+    const newErrors: {[key: string]: string} = { ...errors };
+    
+    // Clear error when field is cleared
+    if (!value.trim()) {
+      newErrors[name] = '';
+      setErrors(newErrors);
+      return;
+    }
+    
+    switch (name) {
+      case 'firstName':
+        newErrors.firstName = value.trim() ? '' : 'First name is required';
+        break;
+      case 'lastName':
+        newErrors.lastName = value.trim() ? '' : 'Last name is required';
+        break;
+      case 'phone':
+        if (!/^(09|\+639)\d{9}$/.test(value)) {
+          newErrors.phone = 'Invalid Philippine phone number (e.g. 09171234567)';
+        } else {
+          newErrors.phone = '';
+        }
+        break;
+      case 'email':
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          newErrors.email = 'Invalid email address';
+        } else {
+          newErrors.email = '';
+        }
+        break;
+      case 'region':
+        newErrors.region = value.trim() ? '' : 'Region is required';
+        break;
+      case 'city':
+        newErrors.city = value.trim() ? '' : 'City is required';
+        break;
+      case 'address':
+        newErrors.address = value.trim() ? '' : 'Address is required';
+        break;
+      case 'zipCode':
+        if (!/^\d+$/.test(value)) {
+          newErrors.zipCode = 'Zip code must be numbers only';
+        } else {
+          newErrors.zipCode = '';
+        }
+        break;
+    }
+    
+    setErrors(newErrors);
+  };
+
+  const isFormValid = () => {
+    return (
+      formData.firstName.trim() &&
+      formData.lastName.trim() &&
+      formData.phone.trim() &&
+      /^(09|\+639)\d{9}$/.test(formData.phone) &&
+      formData.email.trim() &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
+      formData.region.trim() &&
+      formData.city.trim() &&
+      formData.address.trim() &&
+      formData.zipCode.trim() &&
+      /^\d+$/.test(formData.zipCode) &&
+      agreedToTerms
+    );
   };
 
   const handleSubmit = async () => {
-    // --- Validation ---
+    const newErrors: {[key: string]: string} = {};
+
+    // Validate personal information
+    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+    else if (!/^(09|\+639)\d{9}$/.test(formData.phone)) newErrors.phone = 'Invalid Philippine phone number (e.g. 09171234567)';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email address';
+
+    // Validate shipping information
+    if (!formData.region.trim()) newErrors.region = 'Region is required';
+    if (!formData.city.trim()) newErrors.city = 'City is required';
+    if (!formData.address.trim()) newErrors.address = 'Address is required';
+    if (!formData.zipCode.trim()) newErrors.zipCode = 'Zip code is required';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     if (!agreedToTerms) { alert('Please agree to the data processing terms'); return; }
-    if (!formData.firstName || !formData.lastName || !formData.phone || !formData.email) {
-      alert('Please fill in all personal information fields.'); return;
-    }
-    if (!formData.region || !formData.city || !formData.address || !formData.zipCode) {
-      alert('Please fill in all shipping information fields.'); return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) { alert('Please enter a valid email address.'); return; }
-    const phoneRegex = /^(09|\+639)\d{9}$/;
-    if (!phoneRegex.test(formData.phone)) { alert('Please enter a valid Philippine phone number (e.g. 09171234567).'); return; }
 
     setLoading(true);
     try {
-      // STEP 1: Create the order (this also checks inventory)
+      // Maps exactly to OrderSchema requirements
       const orderData = {
         customer_info: {
           name: `${formData.firstName} ${formData.lastName}`,
@@ -60,7 +148,7 @@ export default function CheckoutPage() {
           delivery_address: `${formData.address}, ${formData.city}, ${formData.region} ${formData.zipCode}`,
         },
         order_source: 'web',
-        items: cart.map(item => ({
+        items: checkoutItems.map(item => ({
           product_id: item.product_id,
           product_name: item.product_name,
           quantity: item.quantity,
@@ -73,34 +161,37 @@ export default function CheckoutPage() {
       const orderId = orderResponse.data.order.order_id;
       const orderTotal = orderResponse.data.order.total_amount;
 
-      // STEP 2: Confirm payment (simulate for now; replace with real gateway later)
       const paymentData = {
         order_id: orderId,
-        payment_method: paymentMethod,  // from your state
+        payment_method: paymentMethod, 
         payment_amount: orderTotal,
         payment_status: paymentMethod === 'COD' ? 'Pending' : 'Confirmed',
-        transaction_reference: 'TXN-' + Date.now(), // real gateway provides this
+        transaction_reference: 'TXN-' + Date.now(), 
       };
 
       await apiClient.post('/payments/confirm', paymentData);
 
       clearCart();
-      // Redirect to a success page with the order ID
       window.location.href = `/track?order_id=${orderId}&contact=${encodeURIComponent(formData.phone)}`;
 
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
-      alert(msg);
+      // Catch specific inventory rejection handled in backend checkStock()
+      if (error.response?.data?.available !== undefined) {
+         alert(`Stock Error: ${error.response.data.message} Only ${error.response.data.available} left in inventory.`);
+      } else {
+        const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
+        alert(msg);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  if (cart.length === 0) {
+  if (checkoutItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <nav className="bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-5">
-          <div className="flex items-center justify-between max-w-[1920px] mx-auto">
+          <div className="flex items-center justify-between max-w-480 mx-auto">
             <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
               KAM<span className="text-indigo-500">S</span>
             </Link>
@@ -116,8 +207,8 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
-      <nav className="bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-5">
+      {/* Sticky Navigation Bar */}
+      <nav className="sticky top-0 z-50 bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-4 shadow-lg">
         <div className="flex items-center justify-between max-w-[1920px] mx-auto">
           <div className="flex items-center gap-8 lg:gap-52">
             <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
@@ -125,133 +216,159 @@ export default function CheckoutPage() {
             </Link>
             <div className="hidden md:flex items-center gap-6 lg:gap-24">
               <Link href="/catalog" className="text-white text-base lg:text-xl">Shop</Link>
-              <Link href="/track" className="text-white text-base lg:text-xl font-semibold">Track Order</Link>
               <Link href="/cart" className="text-white text-base lg:text-xl">Cart</Link>
+              <Link href="/track" className="text-white text-base lg:text-xl">Track Order</Link>
               <Link href="#" className="text-white text-base lg:text-xl">About Us</Link>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Main Content */}
-      <div className="max-w-[1920px] mx-auto px-4 lg:px-8 xl:px-20 py-8 lg:py-12">
-        <h1 className="text-3xl lg:text-4xl font-semibold text-black mb-8">Checkout</h1>
+      <div className="max-w-[1920px] mx-auto px-8 lg:px-12 xl:px-16 py-4 lg:py-8">
+        <h1 className="text-3xl lg:text-4xl font-semibold text-black mb-6">Checkout</h1>
 
         <div className="flex flex-col xl:flex-row gap-8">
-          {/* Left Side - Forms */}
           <div className="flex-1 space-y-8">
-            {/* Personal Information */}
             <section>
               <h2 className="text-2xl font-medium text-black mb-6">Personal Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="border-b border-neutral-300 py-2">
-                  <label className="text-sm text-gray-500 block mb-1">First Name</label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    placeholder="Juan"
-                    className="w-full outline-none text-black bg-transparent"
-                  />
+                <div>
+                  <div className="border-b border-neutral-300 py-2">
+                    <label className="text-sm text-gray-500 block mb-1">First Name</label>
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      placeholder="Juan"
+                      className={`w-full outline-none text-black bg-transparent ${errors.firstName ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
                 </div>
-                <div className="border-b border-neutral-300 py-2">
-                  <label className="text-sm text-gray-500 block mb-1">Last Name</label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    placeholder="Luna"
-                    className="w-full outline-none text-black bg-transparent"
-                  />
+                <div>
+                  <div className="border-b border-neutral-300 py-2">
+                    <label className="text-sm text-gray-500 block mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      placeholder="Luna"
+                      className={`w-full outline-none text-black bg-transparent ${errors.lastName ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
                 </div>
-                <div className="border-b border-neutral-300 py-2">
-                  <label className="text-sm text-gray-500 block mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="09171234567"
-                    className="w-full outline-none text-black bg-transparent"
-                  />
+                <div>
+                  <div className="border-b border-neutral-300 py-2">
+                    <label className="text-sm text-gray-500 block mb-1">Phone Number</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="09171234567"
+                      className={`w-full outline-none text-black bg-transparent ${errors.phone ? 'border-red-500' : ''}`}
+                      pattern="^(09|\+639)\d{9}$"
+                    />
+                  </div>
+                  {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                 </div>
-                <div className="border-b border-neutral-300 py-2">
-                  <label className="text-sm text-gray-500 block mb-1">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="JuanLuna@gmail.com"
-                    className="w-full outline-none text-black bg-transparent"
-                  />
+                <div>
+                  <div className="border-b border-neutral-300 py-2">
+                    <label className="text-sm text-gray-500 block mb-1">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="JuanLuna@gmail.com"
+                      className={`w-full outline-none text-black bg-transparent ${errors.email ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                 </div>
               </div>
             </section>
 
-            {/* Shipping Information */}
             <section>
               <h2 className="text-2xl font-medium text-black mb-6">Shipping Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="border-b border-neutral-300 py-2">
-                  <label className="text-sm text-gray-500 block mb-1">Region</label>
-                  <input
-                    type="text"
-                    name="region"
-                    value={formData.region}
-                    onChange={handleInputChange}
-                    placeholder="Metro Manila"
-                    className="w-full outline-none text-black bg-transparent"
-                  />
+                <div>
+                  <div className="border-b border-neutral-300 py-2">
+                    <label className="text-sm text-gray-500 block mb-1">Region</label>
+                    <input
+                      type="text"
+                      name="region"
+                      value={formData.region}
+                      onChange={handleInputChange}
+                      placeholder="Metro Manila"
+                      className={`w-full outline-none text-black bg-transparent ${errors.region ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.region && <p className="text-red-500 text-sm mt-1">{errors.region}</p>}
                 </div>
-                <div className="border-b border-neutral-300 py-2">
-                  <label className="text-sm text-gray-500 block mb-1">City</label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    placeholder="Manila"
-                    className="w-full outline-none text-black bg-transparent"
-                  />
+                <div>
+                  <div className="border-b border-neutral-300 py-2">
+                    <label className="text-sm text-gray-500 block mb-1">City</label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      placeholder="Manila"
+                      className={`w-full outline-none text-black bg-transparent ${errors.city ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
                 </div>
-                <div className="border-b border-neutral-300 py-2">
-                  <label className="text-sm text-gray-500 block mb-1">Address</label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    placeholder="123 Main Street"
-                    className="w-full outline-none text-black bg-transparent"
-                  />
+                <div>
+                  <div className="border-b border-neutral-300 py-2">
+                    <label className="text-sm text-gray-500 block mb-1">Address</label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      placeholder="123 Main Street"
+                      className={`w-full outline-none text-black bg-transparent ${errors.address ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
                 </div>
-                <div className="border-b border-neutral-300 py-2">
-                  <label className="text-sm text-gray-500 block mb-1">Zip Code</label>
-                  <input
-                    type="text"
-                    name="zipCode"
-                    value={formData.zipCode}
-                    onChange={handleInputChange}
-                    placeholder="1000"
-                    className="w-full outline-none text-black bg-transparent"
-                  />
+                <div>
+                  <div className="border-b border-neutral-300 py-2">
+                    <label className="text-sm text-gray-500 block mb-1">Zip Code</label>
+                    <input
+                      type="text"
+                      name="zipCode"
+                      value={formData.zipCode}
+                      onChange={(e) => {
+                        // Only allow numbers
+                        const numericValue = e.target.value.replace(/\D/g, '');
+                        setFormData({ ...formData, zipCode: numericValue });
+                        validateField('zipCode', numericValue);
+                      }}
+                      placeholder="1000"
+                      className={`w-full outline-none text-black bg-transparent ${errors.zipCode ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.zipCode && <p className="text-red-500 text-sm mt-1">{errors.zipCode}</p>}
                 </div>
               </div>
             </section>
 
-            {/* Data Consent */}
             <div className="flex items-center gap-3">
-              <Checkbox
-                isSelected={agreedToTerms}
+              <input
+                type="radio"
+                checked={agreedToTerms}
                 onChange={() => setAgreedToTerms(!agreedToTerms)}
+                className="w-5 h-5 accent-indigo-500"
               />
               <span className="text-black">I agree to <Link href="#" className="underline">data processing</Link></span>
             </div>
 
-            {/* Delivery Options */}
             <section>
               <h2 className="text-3xl font-medium text-black mb-6">Delivery</h2>
               <div className="space-y-4">
@@ -292,7 +409,6 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            {/* Payment Options */}
             <section>
               <h2 className="text-3xl font-medium text-black mb-6">Payment</h2>
               <div className="space-y-4">
@@ -315,28 +431,22 @@ export default function CheckoutPage() {
                 ))}
               </div>
             </section>
-
-            {/* Pay Button */}
-            <Button
-              onClick={handleSubmit}
-              isDisabled={loading || !agreedToTerms}
-              className="w-full bg-indigo-500 text-white text-xl font-medium py-4 h-12 rounded-lg data-[disabled=true]:bg-gray-400"
-            >
-              {loading ? 'Processing...' : 'Pay and Place Order'}
-            </Button>
           </div>
 
-          {/* Right Side - Order Summary */}
-          <div className="w-full xl:w-[600px]">
+          <div className="w-full xl:w-150">
             <Card className="rounded-xl border border-neutral-300 shadow-none p-6">
-              <h3 className="text-2xl font-medium text-black mb-6">Items ({cart.length})</h3>
+              <h3 className="text-2xl font-medium text-black mb-6">Items ({checkoutItems.length})</h3>
 
-              {/* Cart Items */}
               <div className="space-y-6 mb-6">
-                {cart.map((item) => (
+                {checkoutItems.map((item: any) => (
                   <div key={item.product_id} className="flex items-center gap-4 pb-4 border-b border-neutral-200">
-                    <div className="w-24 h-24 bg-neutral-100 rounded-xl flex items-center justify-center">
-                      <img src="https://placehold.co/75x53" alt={item.product_name} className="w-20 h-14 object-contain" />
+                    <div className="w-24 h-24 bg-neutral-100 rounded-xl flex items-center justify-center overflow-hidden">
+                      {/* Pulls in dynamically spread image_url from the Context payload */}
+                      <img 
+                        src={item.image_url || "https://placehold.co/75x53"} 
+                        alt={item.product_name} 
+                        className="w-full h-full object-cover" 
+                      />
                     </div>
                     <div className="flex-1">
                       <p className="text-xl font-medium text-black">{item.product_name}</p>
@@ -347,7 +457,6 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              {/* Voucher */}
               <div className="flex gap-3 mb-6">
                 <input
                   type="text"
@@ -363,7 +472,6 @@ export default function CheckoutPage() {
                 </Button>
               </div>
 
-              {/* Summary */}
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-xl font-medium text-black">
                   <span>Shipping</span>
@@ -381,6 +489,14 @@ export default function CheckoutPage() {
                 <span className="text-2xl font-medium text-black">Total:</span>
                 <span className="text-4xl font-semibold text-black">₱{total.toLocaleString()}</span>
               </div>
+
+              <Button
+                onClick={handleSubmit}
+                isDisabled={loading || !isFormValid()}
+                className="w-full bg-indigo-500 text-white text-xl font-medium py-4 h-12 rounded-lg data-[disabled=true]:bg-gray-400"
+              >
+                {loading ? 'Processing...' : 'Pay and Place Order'}
+              </Button>
             </Card>
           </div>
         </div>
