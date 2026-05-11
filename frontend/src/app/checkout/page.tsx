@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Button, Card, Checkbox } from "@heroui/react";
 import { useCart } from '../../context/CartContext';
 import apiClient from '../../api/axiosConfig';
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const { cart, clearCart } = useCart();
   const searchParams = useSearchParams();
   const selectedIds = searchParams.get('selected')?.split(',') || [];
@@ -560,5 +560,13 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><p>Loading...</p></div>}>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }
