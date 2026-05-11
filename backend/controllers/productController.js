@@ -38,12 +38,16 @@ exports.getProducts = async (req, res) => {
 
         // 2. Get stock levels from Inventory API
         let inventoryData = [];
-        try {
-            const invRes = await fetch(`${process.env.INVENTORY_API_URL}/api/inventory`);
-            if (invRes.ok) inventoryData = await invRes.json();
-        } catch (err) {
-            console.warn('[Inventory API unavailable] Showing products without stock info');
-            // Don't crash — show products anyway, just without stock badges
+        if (process.env.INVENTORY_API_URL) {
+            try {
+                const invRes = await fetch(`${process.env.INVENTORY_API_URL}/api/inventory`);
+                if (invRes.ok) inventoryData = await invRes.json();
+            } catch (err) {
+                console.warn('[Inventory API unavailable] Showing products without stock info');
+                // Don't crash — show products anyway, just without stock badges
+            }
+        } else {
+            console.warn('[INVENTORY_API_URL not set] Showing products without stock info');
         }
 
         // 3. Merge by product_id
@@ -78,20 +82,24 @@ exports.getProductById = async (req, res) => {
 
         // Get stock data from Inventory API
         let inventoryData = {};
-        try {
-            const invRes = await fetch(`${process.env.INVENTORY_API_URL}/api/inventory`);
-            if (invRes.ok) {
-                const allInventory = await invRes.json();
-                const invRecord = allInventory.find(inv => inv.product_id === product.product_id);
-                if (invRecord) {
-                    inventoryData = {
-                        current_stock: invRecord.current_stock,
-                        stock_status: invRecord.status,
-                    };
+        if (process.env.INVENTORY_API_URL) {
+            try {
+                const invRes = await fetch(`${process.env.INVENTORY_API_URL}/api/inventory`);
+                if (invRes.ok) {
+                    const allInventory = await invRes.json();
+                    const invRecord = allInventory.find(inv => inv.product_id === product.product_id);
+                    if (invRecord) {
+                        inventoryData = {
+                            current_stock: invRecord.current_stock,
+                            stock_status: invRecord.status,
+                        };
+                    }
                 }
+            } catch (err) {
+                console.warn('[Inventory API unavailable]', err.message);
             }
-        } catch (err) {
-            console.warn('[Inventory API unavailable]', err.message);
+        } else {
+            console.warn('[INVENTORY_API_URL not set]');
         }
 
         const productObj = product.toObject ? product.toObject() : product;
@@ -130,19 +138,23 @@ exports.createProduct = async (req, res) => {
         });
 
         // Register in Inventory with default stock
-        try {
-            await fetch(`${process.env.INVENTORY_API_URL}/api/inventory/update`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    product_id: product.product_id,
-                    current_stock: initial_stock || 50,
-                }),
-            });
-            console.log(`[Inventory] Registered ${product.product_id}`);
-        } catch (err) {
-            console.warn(`[Inventory] Failed to register ${product.product_id}:`, err.message);
-            // Don't fail the product creation — just log it
+        if (process.env.INVENTORY_API_URL) {
+            try {
+                await fetch(`${process.env.INVENTORY_API_URL}/api/inventory/update`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        product_id: product.product_id,
+                        current_stock: initial_stock || 50,
+                    }),
+                });
+                console.log(`[Inventory] Registered ${product.product_id}`);
+            } catch (err) {
+                console.warn(`[Inventory] Failed to register ${product.product_id}:`, err.message);
+                // Don't fail the product creation — just log it
+            }
+        } else {
+            console.log(`[Inventory] Skipped — INVENTORY_API_URL not set`);
         }
 
         res.status(201).json({
