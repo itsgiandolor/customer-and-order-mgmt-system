@@ -116,8 +116,8 @@ function TrackOrderPageInner() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <nav className="bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-5">
+      {/* Sticky Navigation Bar */}
+      <nav className="sticky top-0 z-50 bg-slate-800 border-b border-white/30 px-6 lg:px-14 py-4 shadow-lg">
         <div className="flex items-center justify-between max-w-[1920px] mx-auto">
           <div className="flex items-center gap-8 lg:gap-52">
             <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
@@ -125,13 +125,10 @@ function TrackOrderPageInner() {
             </Link>
             <div className="hidden md:flex items-center gap-6 lg:gap-24">
               <Link href="/catalog" className="text-white text-base lg:text-xl">Shop</Link>
-              <Link href="/track" className="text-white text-base lg:text-xl font-semibold">Track Order</Link>
               <Link href="/cart" className="text-white text-base lg:text-xl">Cart</Link>
+              <Link href="/track" className="text-white text-base lg:text-xl font-semibold">Track Order</Link>
               <Link href="#" className="text-white text-base lg:text-xl">About Us</Link>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/cart" className="text-white text-sm font-bold">Cart</Link>
           </div>
         </div>
       </nav>
