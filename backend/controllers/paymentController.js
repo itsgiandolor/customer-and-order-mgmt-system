@@ -13,13 +13,19 @@ exports.confirmPayment = async (req, res) => {
             order_id,
             payment_method,
             payment_amount,
-            payment_status,
-            transaction_reference,
+            phone_number,
         } = req.body;
 
-        if (!order_id || !payment_method || !payment_amount || !transaction_reference) {
+        if (!order_id || !payment_method || !payment_amount) {
             return res.status(400).json({
-                message: "Order ID, payment method, amount, and transaction reference are required.",
+                message: "Order ID, payment method, and amount are required.",
+            });
+        }
+
+        // Validate phone number for GCash/Maya
+        if ((payment_method === 'GCash' || payment_method === 'Maya') && !phone_number) {
+            return res.status(400).json({
+                message: `${payment_method} requires a phone number.`,
             });
         }
 
@@ -39,27 +45,24 @@ exports.confirmPayment = async (req, res) => {
             });
         }
 
+        const transaction_reference = `TXN-${Date.now()}-${order_id}`;
         const existingPayment = await Payment.findOne({ transaction_reference });
         if (existingPayment) {
             return res.status(409).json({ message: "Duplicate transaction reference detected." });
         }
 
-        const finalPaymentStatus = payment_status || "Confirmed";
-
-        const payment = await Payment.create({
-            payment_id: generatePaymentId(),
-            order_id,
-            payment_method,
-            payment_amount,
-            payment_status: finalPaymentStatus,
-            transaction_reference,
-            payment_date: new Date(),
-        });
-
         // ─── COD (Cash on Delivery) Handling ───────────────────────────────────
         if (payment_method === 'COD') {
-            // For COD: don't deduct stock yet, but still send to delivery
-            // Stock is deducted when delivery confirms receipt
+            const payment = await Payment.create({
+                payment_id: "PAY-" + Date.now().toString().slice(-8),
+                order_id,
+                payment_method,
+                payment_amount,
+                payment_status: 'Pending', // COD stays pending until delivery
+                transaction_reference,
+                payment_date: new Date(),
+            });
+
             order.payment_status = 'Pending';
             order.order_status = 'Confirmed';
             await order.save();
@@ -79,18 +82,23 @@ exports.confirmPayment = async (req, res) => {
             });
         }
 
-        // ─── Non-COD Payment Processing ───────────────────────────────────────
-        order.payment_status = finalPaymentStatus;
-        if (finalPaymentStatus === "Confirmed") {
-            order.order_status = "Confirmed";
-        } else if (finalPaymentStatus === "Failed") {
-            order.order_status = "Cancelled";
-            await order.save();
-            return res.status(200).json({ message: "Payment failed. Order cancelled.", payment, order });
-        }
+        // ─── GCash & Maya Payment Processing (Simple Form) ───────────────────────
+        // For GCash and Maya, just confirm immediately (simulate successful payment)
+        const payment = await Payment.create({
+            payment_id: "PAY-" + Date.now().toString().slice(-8),
+            order_id,
+            payment_method,
+            payment_amount,
+            payment_status: 'Confirmed', // Automatically confirmed
+            transaction_reference,
+            payment_date: new Date(),
+        });
+
+        order.payment_status = 'Confirmed';
+        order.order_status = 'Confirmed';
         await order.save();
 
-        // Deduct Stock
+        // Deduct Stock after payment confirmed
         try {
             await deductStock(order.items);
             console.log('[Inventory] Stock deducted for order:', order.order_id);
@@ -98,24 +106,43 @@ exports.confirmPayment = async (req, res) => {
             console.error('[Inventory deduction failed]', err.message);
         }
 
-        // ─── Delivery Service ─────────────────────────────────────────────────
+        // Process Delivery
         try {
             await processDelivery(order);
-            order.order_status = "Ready for Fulfillment";
+            order.order_status = 'Ready for Fulfillment';
             await order.save();
         } catch (err) {
-            console.error("[Delivery Service error]", err.message);
+            console.error('[Delivery Service error]', err.message);
         }
 
-        // ─── Return response ───────────────────────────────────────────────────
         return res.status(201).json({
-            message: "Payment confirmed. Order is being processed for fulfillment.",
+            message: `${payment_method} payment confirmed. Order is being processed.`,
             payment,
             order,
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+};
+
+// ─── Delivery Service ─────────────────────────────────────────────────
+try {
+    await processDelivery(order);
+    order.order_status = "Ready for Fulfillment";
+    await order.save();
+} catch (err) {
+    console.error("[Delivery Service error]", err.message);
+}
+
+// ─── Return response ───────────────────────────────────────────────────
+return res.status(201).json({
+    message: "Payment confirmed. Order is being processed for fulfillment.",
+    payment,
+    order,
+});
+    } catch (error) {
+    res.status(500).json({ message: error.message });
+}
 };
 
 // GET /api/payments
@@ -145,6 +172,54 @@ exports.getPaymentByOrderId = async (req, res) => {
         const payment = await Payment.findOne({ order_id: req.params.order_id });
         if (!payment) return res.status(404).json({ message: "Payment for this order not found." });
         res.status(200).json(payment);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// POST /api/payments/cod-confirm/:order_id
+// Called when COD order is delivered and payment is collected
+exports.confirmCODPayment = async (req, res) => {
+    try {
+        const { order_id } = req.params;
+
+        const order = await Order.findOne({ order_id });
+        if (!order) return res.status(404).json({ message: "Order not found." });
+
+        const payment = await Payment.findOne({ order_id });
+        if (!payment) return res.status(404).json({ message: "Payment record not found." });
+
+        // Check if COD payment
+        if (payment.payment_method !== 'COD') {
+            return res.status(400).json({ message: "This is not a COD order." });
+        }
+
+        // Check if already confirmed
+        if (payment.payment_status === 'Confirmed') {
+            return res.status(409).json({ message: "Payment already confirmed." });
+        }
+
+        // Mark payment as confirmed
+        payment.payment_status = 'Confirmed';
+        await payment.save();
+
+        // Update order status
+        order.payment_status = 'Confirmed';
+        await order.save();
+
+        // Deduct stock only when COD payment is confirmed (on delivery)
+        try {
+            await deductStock(order.items);
+            console.log('[Inventory] Stock deducted for COD order:', order.order_id);
+        } catch (err) {
+            console.error('[Inventory deduction failed for COD]', err.message);
+        }
+
+        res.status(200).json({
+            message: "COD payment confirmed. Order is complete.",
+            payment,
+            order,
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

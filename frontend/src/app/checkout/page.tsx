@@ -11,7 +11,7 @@ export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const searchParams = useSearchParams();
   const selectedIds = searchParams.get('selected')?.split(',') || [];
-  const checkoutItems = selectedIds.length > 0 
+  const checkoutItems = selectedIds.length > 0
     ? cart.filter(item => selectedIds.includes(item.product_id))
     : cart;
   const [loading, setLoading] = useState(false);
@@ -19,6 +19,8 @@ export default function CheckoutPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('GCash');
   const [deliveryMethod, setDeliveryMethod] = useState('standard');
+  const [paymentPhone, setPaymentPhone] = useState('');
+  const [paymentPhoneError, setPaymentPhoneError] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -30,11 +32,11 @@ export default function CheckoutPage() {
     address: '',
     zipCode: '',
   });
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const subtotal = checkoutItems.reduce((sum, item) => sum + item.subtotal, 0);
   const shipping = deliveryMethod === 'express' ? 90 : 0;
-  const discount = 0; 
+  const discount = 0;
   const total = subtotal + shipping - discount;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,15 +47,15 @@ export default function CheckoutPage() {
   };
 
   const validateField = (name: string, value: string) => {
-    const newErrors: {[key: string]: string} = { ...errors };
-    
+    const newErrors: { [key: string]: string } = { ...errors };
+
     // Clear error when field is cleared
     if (!value.trim()) {
       newErrors[name] = '';
       setErrors(newErrors);
       return;
     }
-    
+
     switch (name) {
       case 'firstName':
         newErrors.firstName = value.trim() ? '' : 'First name is required';
@@ -92,12 +94,12 @@ export default function CheckoutPage() {
         }
         break;
     }
-    
+
     setErrors(newErrors);
   };
 
   const isFormValid = () => {
-    return (
+    const baseValid = (
       formData.firstName.trim() &&
       formData.lastName.trim() &&
       formData.phone.trim() &&
@@ -111,10 +113,17 @@ export default function CheckoutPage() {
       /^\d+$/.test(formData.zipCode) &&
       agreedToTerms
     );
+
+    // Add payment phone validation for GCash/Maya
+    if (paymentMethod === 'GCash' || paymentMethod === 'Maya') {
+      return baseValid && paymentPhone.trim() && /^(09|\+639)\d{9}$/.test(paymentPhone);
+    }
+
+    return baseValid;
   };
 
   const handleSubmit = async () => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
 
     // Validate personal information
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
@@ -130,7 +139,16 @@ export default function CheckoutPage() {
     if (!formData.address.trim()) newErrors.address = 'Address is required';
     if (!formData.zipCode.trim()) newErrors.zipCode = 'Zip code is required';
 
-    if (Object.keys(newErrors).length > 0) {
+    // Validate payment phone for GCash/Maya
+    let paymentPhoneErr = '';
+    if ((paymentMethod === 'GCash' || paymentMethod === 'Maya') && !paymentPhone.trim()) {
+      paymentPhoneErr = `${paymentMethod} number is required`;
+    } else if ((paymentMethod === 'GCash' || paymentMethod === 'Maya') && !/^(09|\+639)\d{9}$/.test(paymentPhone)) {
+      paymentPhoneErr = `Invalid ${paymentMethod} number`;
+    }
+    setPaymentPhoneError(paymentPhoneErr);
+
+    if (Object.keys(newErrors).length > 0 || paymentPhoneErr) {
       setErrors(newErrors);
       return;
     }
@@ -139,7 +157,7 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
-      // Maps exactly to OrderSchema requirements
+      // Create order
       const orderData = {
         customer_info: {
           name: `${formData.firstName} ${formData.lastName}`,
@@ -161,12 +179,12 @@ export default function CheckoutPage() {
       const orderId = orderResponse.data.order.order_id;
       const orderTotal = orderResponse.data.order.total_amount;
 
+      // Submit payment
       const paymentData = {
         order_id: orderId,
-        payment_method: paymentMethod, 
+        payment_method: paymentMethod,
         payment_amount: orderTotal,
-        payment_status: paymentMethod === 'COD' ? 'Pending' : 'Confirmed',
-        transaction_reference: 'TXN-' + Date.now(), 
+        phone_number: paymentMethod === 'COD' ? null : paymentPhone,
       };
 
       await apiClient.post('/payments/confirm', paymentData);
@@ -177,7 +195,7 @@ export default function CheckoutPage() {
     } catch (error: any) {
       // Catch specific inventory rejection handled in backend checkStock()
       if (error.response?.data?.available !== undefined) {
-         alert(`Stock Error: ${error.response.data.message} Only ${error.response.data.available} left in inventory.`);
+        alert(`Stock Error: ${error.response.data.message} Only ${error.response.data.available} left in inventory.`);
       } else {
         const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
         alert(msg);
@@ -423,13 +441,48 @@ export default function CheckoutPage() {
                       name="payment"
                       value={value}
                       checked={paymentMethod === value}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      onChange={(e) => {
+                        setPaymentMethod(e.target.value);
+                        setPaymentPhoneError('');
+                      }}
                       className="w-5 h-5 accent-indigo-500"
                     />
                     <span className="text-xl font-medium text-black">{label}</span>
                   </label>
                 ))}
               </div>
+
+              {/* Payment Phone Number Input for GCash/Maya */}
+              {(paymentMethod === 'GCash' || paymentMethod === 'Maya') && (
+                <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                  <label className="text-sm text-gray-700 block mb-2">Enter your {paymentMethod} number</label>
+                  <input
+                    type="tel"
+                    value={paymentPhone}
+                    onChange={(e) => {
+                      setPaymentPhone(e.target.value);
+                      if (e.target.value && !/^(09|\+639)\d{9}$/.test(e.target.value)) {
+                        setPaymentPhoneError('Invalid phone number');
+                      } else {
+                        setPaymentPhoneError('');
+                      }
+                    }}
+                    placeholder="09171234567"
+                    className={`w-full border rounded-lg px-4 py-2 text-black outline-none ${paymentPhoneError ? 'border-red-500' : 'border-neutral-300'}`}
+                  />
+                  {paymentPhoneError && <p className="text-red-500 text-sm mt-1">{paymentPhoneError}</p>}
+                  <p className="text-xs text-gray-600 mt-2">Format: 09XX XXX XXXX</p>
+                </div>
+              )}
+
+              {/* COD Notice */}
+              {paymentMethod === 'COD' && (
+                <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <p className="text-sm text-amber-800">
+                    <strong>Cash on Delivery:</strong> You will pay when the item is delivered to you.
+                  </p>
+                </div>
+              )}
             </section>
           </div>
 
@@ -442,10 +495,10 @@ export default function CheckoutPage() {
                   <div key={item.product_id} className="flex items-center gap-4 pb-4 border-b border-neutral-200">
                     <div className="w-24 h-24 bg-neutral-100 rounded-xl flex items-center justify-center overflow-hidden">
                       {/* Pulls in dynamically spread image_url from the Context payload */}
-                      <img 
-                        src={item.image_url || "https://placehold.co/75x53"} 
-                        alt={item.product_name} 
-                        className="w-full h-full object-cover" 
+                      <img
+                        src={item.image_url || "https://placehold.co/75x53"}
+                        alt={item.product_name}
+                        className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex-1">
