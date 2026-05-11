@@ -9,10 +9,31 @@ connectDB();
 const app = express();
 
 app.use(cors({
-  origin: [
-    'https://customer-and-order-mgmt-system-five.vercel.app',
-    'http://localhost:3000',
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (Postman, server-to-server)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      // Your frontend's main Vercel domain — add yours here
+      'https://customer-and-order-mgmt-system-five.vercel.app',
+    ];
+
+    // This also allows ALL vercel.app preview deployments from your project
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
 app.use(express.json());
 
