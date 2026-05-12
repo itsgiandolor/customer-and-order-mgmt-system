@@ -40,7 +40,20 @@ export default function ProductCatalog() {
 
   const { cart, addToCart } = useCart();
 
-  const categories = ['Clothing & Apparel', 'Home & Living', 'Electronics'];
+  const categories = [
+    'Clothing & Apparel',
+    'Home & Living',
+    'Electronics',
+    'Sports & Outdoors',
+    'Beauty & Personal Care',
+    'Books & Media',
+    'Toys & Games',
+    'Food & Beverages',
+    'Furniture',
+    'Jewelry & Accessories',
+    'Office Supplies',
+    'Pet Supplies',
+  ];
 
   const handleAddToCart = (product: any) => {
     try {

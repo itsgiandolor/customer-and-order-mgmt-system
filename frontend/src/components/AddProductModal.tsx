@@ -29,7 +29,20 @@ export default function AddProductModal({
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-    const categories = ['Clothing & Apparel', 'Home & Living', 'Electronics'];
+    const categories = [
+        'Clothing & Apparel',
+        'Home & Living',
+        'Electronics',
+        'Sports & Outdoors',
+        'Beauty & Personal Care',
+        'Books & Media',
+        'Toys & Games',
+        'Food & Beverages',
+        'Furniture',
+        'Jewelry & Accessories',
+        'Office Supplies',
+        'Pet Supplies',
+    ];
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
