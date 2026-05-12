@@ -165,7 +165,7 @@ export default function AddProductModal({
                                 value={formData.product_name}
                                 onChange={handleInputChange}
                                 placeholder="Enter product name"
-                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.product_name
+                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-black ${errors.product_name
                                     ? 'border-red-500 focus:ring-red-200'
                                     : 'border-gray-300 focus:ring-indigo-200'
                                     }`}
@@ -186,7 +186,7 @@ export default function AddProductModal({
                                 onChange={handleInputChange}
                                 placeholder="Enter product description"
                                 rows={3}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 resize-none"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 resize-none text-black"
                             />
                         </div>
 
@@ -203,7 +203,7 @@ export default function AddProductModal({
                                 placeholder="0.00"
                                 step="0.01"
                                 min="0"
-                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.price
+                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-black ${errors.price
                                     ? 'border-red-500 focus:ring-red-200'
                                     : 'border-gray-300 focus:ring-indigo-200'
                                     }`}
@@ -222,7 +222,7 @@ export default function AddProductModal({
                                 name="category"
                                 value={formData.category}
                                 onChange={handleSelectChange}
-                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.category
+                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-black ${errors.category
                                     ? 'border-red-500 focus:ring-red-200'
                                     : 'border-gray-300 focus:ring-indigo-200'
                                     }`}
@@ -250,7 +250,7 @@ export default function AddProductModal({
                                 value={formData.image_url}
                                 onChange={handleInputChange}
                                 placeholder="https://example.com/image.jpg"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 text-black"
                             />
                             <p className="text-xs text-gray-500 mt-1">Leave empty for placeholder image</p>
                         </div>
@@ -267,7 +267,7 @@ export default function AddProductModal({
                                 onChange={handleInputChange}
                                 placeholder="50"
                                 min="0"
-                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.initial_stock
+                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-black ${errors.initial_stock
                                     ? 'border-red-500 focus:ring-red-200'
                                     : 'border-gray-300 focus:ring-indigo-200'
                                     }`}
