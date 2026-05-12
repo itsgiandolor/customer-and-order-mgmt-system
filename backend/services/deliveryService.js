@@ -3,7 +3,7 @@ const DELIVERY_URL = () => process.env.DELIVERY_API_URL;
 // Register order in Delivery system
 // Creates a delivery order in the external delivery API
 exports.registerDeliveryOrder = async (order) => {
-    const res = await fetch(`${DELIVERY_URL()}/api/orders`, {
+    const res = await fetch(`${DELIVERY_URL()}/api/deliveries`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
