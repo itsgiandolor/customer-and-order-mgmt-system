@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from "@heroui/react";
 import apiClient from '../../api/axiosConfig';
+import AddProductModal from '../../components/AddProductModal';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products'>('overview');
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
 
   // Fetch all admin data on mount
   useEffect(() => {
@@ -55,6 +57,16 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleProductAdded = async () => {
+    // Refresh the products list
+    try {
+      const response = await apiClient.get('/products');
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Failed to refresh products:', error);
+    }
+  };
+
   // Calculated Stats
   const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
   const pendingOrders = orders.filter(o => o.order_status === 'Processing' || o.order_status === 'Pending').length;
@@ -79,19 +91,19 @@ export default function AdminDashboard() {
           </Link>
         </div>
         <nav className="flex-1 py-6 px-4 space-y-2">
-          <button 
+          <button
             onClick={() => setActiveTab('overview')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'overview' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
           >
             📊 Dashboard Overview
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('orders')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'orders' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
           >
             📦 Order Management
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('products')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'products' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
           >
@@ -117,7 +129,7 @@ export default function AdminDashboard() {
 
         {/* Scrollable Workspace */}
         <div className="flex-1 overflow-auto p-8">
-          
+
           {/* OVERVIEW TAB */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
@@ -198,15 +210,15 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4 font-semibold">₱{order.total_amount.toLocaleString()}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2.5 py-1 text-xs font-medium rounded-full 
-                            ${order.order_status === 'Processing' ? 'bg-amber-100 text-amber-700' : 
-                              order.order_status === 'In Transit' ? 'bg-blue-100 text-blue-700' : 
-                              order.order_status === 'Delivered' ? 'bg-green-100 text-green-700' : 
-                              'bg-slate-100 text-slate-700'}`}>
+                            ${order.order_status === 'Processing' ? 'bg-amber-100 text-amber-700' :
+                              order.order_status === 'In Transit' ? 'bg-blue-100 text-blue-700' :
+                                order.order_status === 'Delivered' ? 'bg-green-100 text-green-700' :
+                                  'bg-slate-100 text-slate-700'}`}>
                             {order.order_status}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <select 
+                          <select
                             className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 ml-auto outline-none"
                             value={order.order_status}
                             onChange={(e) => handleUpdateOrderStatus(order.order_id, e.target.value)}
@@ -232,7 +244,7 @@ export default function AdminDashboard() {
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                 <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wider">Product Inventory</h2>
-                <Button className="bg-indigo-600 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-sm">
+                <Button onClick={() => setIsAddProductModalOpen(true)} className="bg-indigo-600 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition">
                   + Add New Product
                 </Button>
               </div>
@@ -272,7 +284,7 @@ export default function AdminDashboard() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <Button 
+                          <Button
                             isDisabled={!product.is_active}
                             onClick={() => handleDeactivateProduct(product.product_id)}
                             className="bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold px-3 py-1.5 rounded-lg data-[disabled=true]:opacity-50"
@@ -290,6 +302,15 @@ export default function AdminDashboard() {
 
         </div>
       </main>
+
+      {/* Add Product Modal */}
+      <AddProductModal
+        isOpen={isAddProductModalOpen}
+        onClose={() => setIsAddProductModalOpen(false)}
+        onProductAdded={handleProductAdded}
+        onError={(message) => alert(message)}
+        onSuccess={(message) => alert(message)}
+      />
     </div>
   );
 }
