@@ -6,6 +6,9 @@ import { useSearchParams } from 'next/navigation';
 import { Button, Card, Checkbox } from "@heroui/react";
 import { useCart } from '../../context/CartContext';
 import apiClient from '../../api/axiosConfig';
+import ConfirmModal from '../../components/ConfirmModal';
+import OrderSuccessModal from '../../components/OrderSuccessModal';
+import Toast from '../../components/Toast';
 
 function CheckoutPageContent() {
   const { cart, clearCart } = useCart();
@@ -21,6 +24,10 @@ function CheckoutPageContent() {
   const [deliveryMethod, setDeliveryMethod] = useState('standard');
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentPhoneError, setPaymentPhoneError] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [orderNumber, setOrderNumber] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -122,26 +129,20 @@ function CheckoutPageContent() {
     return baseValid;
   };
 
-  const handleSubmit = async () => {
-    const newErrors: { [key: string]: string } = {};
+  const handleSubmit = () => {
+    // Form validation
+    const newErrors: any = {};
+    if (!formData.firstName) newErrors.firstName = 'First name is required';
+    if (!formData.lastName) newErrors.lastName = 'Last name is required';
+    if (!formData.phone) newErrors.phone = 'Phone number is required';
+    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.region) newErrors.region = 'Region is required';
+    if (!formData.city) newErrors.city = 'City is required';
+    if (!formData.address) newErrors.address = 'Address is required';
+    if (!formData.zipCode) newErrors.zipCode = 'Zip code is required';
 
-    // Validate personal information
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
-    else if (!/^(09|\+639)\d{9}$/.test(formData.phone.replace(/\s/g, ''))) newErrors.phone = 'Invalid Philippine phone number (e.g. 09171234567)';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email address';
-
-    // Validate shipping information
-    if (!formData.region.trim()) newErrors.region = 'Region is required';
-    if (!formData.city.trim()) newErrors.city = 'City is required';
-    if (!formData.address.trim()) newErrors.address = 'Address is required';
-    if (!formData.zipCode.trim()) newErrors.zipCode = 'Zip code is required';
-
-    // Validate payment phone for GCash/Maya
     let paymentPhoneErr = '';
-    if ((paymentMethod === 'GCash' || paymentMethod === 'Maya') && !paymentPhone.trim()) {
+    if (paymentMethod !== 'COD' && !paymentPhone) {
       paymentPhoneErr = `${paymentMethod} number is required`;
     } else if ((paymentMethod === 'GCash' || paymentMethod === 'Maya') && !/^(09|\+639)\d{9}$/.test(paymentPhone.replace(/\s/g, ''))) {
       paymentPhoneErr = `Invalid ${paymentMethod} number`;
@@ -153,9 +154,16 @@ function CheckoutPageContent() {
       return;
     }
 
-    if (!agreedToTerms) { alert('Please agree to the data processing terms'); return; }
+    if (!agreedToTerms) { alert('Please agree to data processing terms'); return; }
 
+    // Show confirmation modal
+    setShowConfirmModal(true);
+  };
+
+  const confirmOrder = async () => {
+    setShowConfirmModal(false);
     setLoading(true);
+    
     try {
       // Create order
       const orderData = {
@@ -190,16 +198,12 @@ function CheckoutPageContent() {
       await apiClient.post('/payments/confirm', paymentData);
 
       clearCart();
-      window.location.href = `/track?order_id=${orderId}&contact=${encodeURIComponent(formData.phone)}`;
+      setOrderNumber(orderId);
+      setShowSuccessModal(true);
 
-    } catch (error: any) {
-      // Catch specific inventory rejection handled in backend checkStock()
-      if (error.response?.data?.available !== undefined) {
-        alert(`Stock Error: ${error.response.data.message} Only ${error.response.data.available} left in inventory.`);
-      } else {
-        const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
-        alert(msg);
-      }
+    } catch (err: any) {
+      console.error(err);
+      setToast({ message: err.response?.data?.detail || 'Order failed. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -494,9 +498,9 @@ function CheckoutPageContent() {
 
               <div className="space-y-6 mb-6">
                 {checkoutItems.map((item: any) => (
-                  <div key={item.product_id} className="flex items-center gap-4 pb-4 border-b border-neutral-200">
-                    <div className="w-24 h-24 bg-neutral-100 rounded-xl flex items-center justify-center overflow-hidden">
-                      {/* Pulls in dynamically spread image_url from the Context payload */}
+                  <div key={item.product_id} className="flex items-center gap-3 pb-3 border-b border-neutral-200">
+                    <div className="w-16 h-16 bg-neutral-100 rounded-lg flex items-center justify-center overflow-hidden">
+                      {/* Pulls in dynamically spread image_url from Context payload */}
                       <img
                         src={item.image_url || "https://placehold.co/75x53"}
                         alt={item.product_name}
@@ -504,10 +508,10 @@ function CheckoutPageContent() {
                       />
                     </div>
                     <div className="flex-1">
-                      <p className="text-xl font-medium text-black">{item.product_name}</p>
-                      <p className="text-base text-gray-500">Qty: {item.quantity}</p>
+                      <p className="text-base font-medium text-black">{item.product_name}</p>
+                      <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                     </div>
-                    <p className="text-2xl font-semibold text-black">₱{item.subtotal.toLocaleString()}</p>
+                    <p className="text-lg font-semibold text-black">₱{item.subtotal.toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -548,7 +552,7 @@ function CheckoutPageContent() {
               <button
                 onClick={handleSubmit}
                 disabled={loading || !isFormValid()}
-                className={`w-full text-white text-xl font-medium py-4 h-12 rounded-lg font-semibold transition ${loading || !isFormValid()
+                className={`w-full text-white text-xl font-semibold py-4 h-12 rounded-lg transition flex items-center justify-center ${loading || !isFormValid()
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-indigo-500 hover:bg-indigo-600'
                   }`}
@@ -559,6 +563,34 @@ function CheckoutPageContent() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        title="Confirm Order"
+        message={`Are you sure you want to place this order for ₱${total.toLocaleString()}?`}
+        confirmText="Confirm Order"
+        cancelText="Cancel"
+        onConfirm={confirmOrder}
+        onCancel={() => setShowConfirmModal(false)}
+      />
+
+      {/* Success Modal */}
+      <OrderSuccessModal
+        isOpen={showSuccessModal}
+        orderNumber={orderNumber}
+        onClose={() => window.location.href = '/track'}
+      />
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          isVisible={!!toast}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

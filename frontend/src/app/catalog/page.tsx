@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from "@heroui/react";
 import apiClient from '../../api/axiosConfig';
 import { useCart } from '../../context/CartContext';
+import Toast from '../../components/Toast';
 
 // Safe cart count hook to prevent hydration mismatch
 function useSafeCartCount() {
@@ -35,10 +36,20 @@ export default function ProductCatalog() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const { cart, addToCart } = useCart();
 
   const categories = ['Clothing & Apparel', 'Home & Living', 'Electronics'];
+
+  const handleAddToCart = (product: any) => {
+    try {
+      addToCart(product);
+      setToast({ message: 'Successfully added to cart!', type: 'success' });
+    } catch (error) {
+      setToast({ message: 'Failed to add to cart. Please try again.', type: 'error' });
+    }
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -223,14 +234,14 @@ export default function ProductCatalog() {
                       <div className="mt-auto flex justify-center gap-2">
                         <Button
                           variant="outline"
-                          onClick={() => addToCart(product)}
+                          onClick={() => handleAddToCart(product)}
                           isDisabled={product.stock_status === 'ERROR' || product.current_stock === 0}
                           className="font-semibold text-xs border-2 border-slate-300 bg-slate-100 text-slate-700 hover:bg-white hover:border-slate-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex-[1.5]"
                         >
                           Add to Cart
                         </Button>
                         <Button
-                          onClick={() => { addToCart(product); window.location.href = '/checkout'; }}
+                          onClick={() => { handleAddToCart(product); setTimeout(() => window.location.href = '/checkout', 1000); }}
                           isDisabled={product.stock_status === 'ERROR' || product.current_stock === 0}
                           className="font-semibold text-xs bg-indigo-500 text-white shadow-md shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex-1"
                         >
@@ -244,6 +255,16 @@ export default function ProductCatalog() {
           </div>
         </main>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          isVisible={!!toast}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

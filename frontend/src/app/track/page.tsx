@@ -134,38 +134,11 @@ function TrackOrderPageInner() {
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 lg:px-8 py-12">
-        <h1 className="text-4xl font-semibold text-black mb-2">Track Your Order</h1>
-        <p className="text-gray-500 mb-8">Enter your contact number to see your orders</p>
+      <div className="max-w-[1920px] mx-auto px-8 lg:px-12 xl:px-16 py-2 lg:py-4">
+        <h1 className="text-3xl lg:text-4xl font-semibold text-black mb-3">Track Your Order</h1>
+        <p className="text-gray-500 mb-6">Enter your contact number to see your orders</p>
 
-        {/* Search Form */}
-        <Card className="rounded-xl border border-gray-200 shadow-none p-6 mb-8">
-          <form onSubmit={handleSearch} className="flex gap-4">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 block mb-2">Contact Number</label>
-              <input
-                type="text"
-                value={contactNumber}
-                onChange={(e) => setContactNumber(e.target.value)}
-                placeholder="e.g., 09171234567"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div className="flex items-end">
-              <Button
-                type="submit"
-                isDisabled={loading}
-                className="bg-indigo-600 text-white font-semibold py-3 px-8 rounded-lg"
-              >
-                {loading ? 'Searching...' : 'Find My Orders'}
-              </Button>
-            </div>
-          </form>
-          {error && (
-            <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg mt-4">{error}</div>
-          )}
-        </Card>
-
+        
         {selectedOrder ? (
           /* Selected Order Details View */
           <div className="space-y-6">
@@ -264,9 +237,37 @@ function TrackOrderPageInner() {
           </div>
         ) : (
           /* Orders List View */
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left: In Transit Orders */}
-            <div className="lg:col-span-2 space-y-6">
+          <div className="flex flex-col xl:flex-row gap-8">
+            {/* Left: Orders List */}
+            <div className="flex-1 space-y-6">
+              {/* Search Form Above Active Orders */}
+              <Card className="rounded-xl border border-gray-200 shadow-none p-6">
+                <form onSubmit={handleSearch} className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-gray-700 block mb-2">Contact Number</label>
+                    <input
+                      type="text"
+                      value={contactNumber}
+                      onChange={(e) => setContactNumber(e.target.value)}
+                      placeholder="e.g., 09171234567"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      type="submit"
+                      isDisabled={loading}
+                      className="bg-indigo-600 text-white font-semibold px-8 rounded-lg h-12"
+                    >
+                      {loading ? 'Searching...' : 'Find My Orders'}
+                    </Button>
+                  </div>
+                </form>
+                {error && (
+                  <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg mt-4">{error}</div>
+                )}
+              </Card>
+
               {/* Active Orders Section */}
               <div>
                 <h2 className="text-2xl font-semibold text-black mb-4 flex items-center gap-2">
@@ -277,10 +278,8 @@ function TrackOrderPageInner() {
                 {inTransitOrders.length === 0 ? (
                   <Card className="rounded-xl border border-gray-200 shadow-none p-8 text-center">
                     <div className="text-5xl mb-4">🚚</div>
-                    <p className="text-gray-500">No orders currently in transit</p>
-                    <Link href="/catalog" className="text-indigo-600 hover:underline mt-2 inline-block">
-                      Start shopping →
-                    </Link>
+                    <p className="text-gray-500 mb-2">No active orders</p>
+                    <p className="text-sm text-gray-400">Your active orders will appear here</p>
                   </Card>
                 ) : (
                   <div className="space-y-4">
@@ -288,37 +287,24 @@ function TrackOrderPageInner() {
                       <Card
                         key={order.order_id}
                         onClick={() => selectOrder(order)}
-                        className="rounded-xl border border-gray-200 shadow-none p-5 cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all"
+                        className="rounded-xl border border-gray-200 shadow-none p-6 cursor-pointer hover:border-indigo-500 transition-all"
                       >
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-4">
                           <div>
-                            <p className="text-sm text-gray-500">Order ID</p>
-                            <p className="font-bold text-black">{order.order_id}</p>
+                            <p className="font-bold text-black text-lg">{order.order_id}</p>
+                            <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                           </div>
-                          <div className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.order_status)}`}>
+                          <div className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(order.order_status)}`}>
                             {order.order_status}
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex-1">
-                            <p className="text-gray-500">Items</p>
-                            <p className="font-medium text-black">{order.items.length} items</p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">{order.items.length} items</p>
+                            <p className="font-semibold text-black">₱{order.total_amount.toLocaleString()}</p>
                           </div>
-                          <div className="flex-1">
-                            <p className="text-gray-500">Order Date</p>
-                            <p className="font-medium text-black">{new Date(order.createdAt).toLocaleDateString()}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-gray-500">Total</p>
-                            <p className="font-semibold text-indigo-600">₱{order.total_amount.toLocaleString()}</p>
-                          </div>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <span>🚚</span>
-                              <span>Click to track this order</span>
-                            </div>
+                          <div className="flex items-center gap-2 text-indigo-600">
+                            <span>Click to track this order</span>
                             <span className="text-indigo-600 text-sm font-medium">View Details →</span>
                           </div>
                         </div>
@@ -358,8 +344,8 @@ function TrackOrderPageInner() {
               )}
             </div>
 
-            {/* Right: Help Section */}
-            <div className="space-y-6">
+            {/* Right: Help Section - Fixed width like checkout order summary */}
+            <div className="w-full xl:w-80 space-y-6">
               <Card className="rounded-xl border border-gray-200 shadow-none p-6">
                 <h3 className="font-semibold text-black mb-4">Need Help?</h3>
                 <div className="space-y-4">
