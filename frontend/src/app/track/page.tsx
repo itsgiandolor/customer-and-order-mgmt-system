@@ -250,7 +250,7 @@ function TrackOrderPageInner() {
                       value={contactNumber}
                       onChange={(e) => setContactNumber(e.target.value)}
                       placeholder="e.g., 09171234567"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-indigo-500"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 text-black"
                     />
                   </div>
                   <div className="flex items-end">

@@ -199,11 +199,15 @@ function CheckoutPageContent() {
 
       clearCart();
       setOrderNumber(orderId);
-      setShowSuccessModal(true);
+      
+      // Redirect to order success page
+      window.location.href = `/order-success?order=${orderId}`;
 
     } catch (err: any) {
       console.error(err);
-      setToast({ message: err.response?.data?.detail || 'Order failed. Please try again.', type: 'error' });
+      
+      // Redirect to order failure page
+      window.location.href = '/order-failure';
     } finally {
       setLoading(false);
     }
