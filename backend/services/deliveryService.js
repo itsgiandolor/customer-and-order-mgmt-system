@@ -1,5 +1,13 @@
 const DELIVERY_URL = () => process.env.DELIVERY_API_URL;
 
+const requireBaseUrl = () => {
+    const base = DELIVERY_URL();
+    if (!base || typeof base !== 'string') {
+        throw new Error('DELIVERY_API_URL is not set');
+    }
+    return base.replace(/\/+$/, '');
+};
+
 // Safely parse response — returns text if not JSON
 const safeJson = async (res) => {
     const text = await res.text();
@@ -10,9 +18,16 @@ const safeJson = async (res) => {
     }
 };
 
-// Register order in Delivery system
+const isMissingRoute404 = (res, data) => {
+    if (res.status !== 404) return false;
+    const msg = String(data?.message ?? '');
+    return msg.includes('Cannot POST') || msg.includes('Cannot GET');
+};
+
+// Register order in Delivery system (skipped if that route is not deployed)
 exports.registerDeliveryOrder = async (order) => {
-    const url = `${DELIVERY_URL()}/api/orders`;
+    const base = requireBaseUrl();
+    const url = `${base}/api/orders`;
     console.log('[Delivery] Registering order at:', url);
 
     const res = await fetch(url, {
@@ -42,6 +57,12 @@ exports.registerDeliveryOrder = async (order) => {
     const data = await safeJson(res);
 
     if (!res.ok) {
+        if (isMissingRoute404(res, data)) {
+            console.warn(
+                '[Delivery] /api/orders is not available on this host; skipping registration (proceeding with delivery only).'
+            );
+            return null;
+        }
         console.error('[Delivery] registerDeliveryOrder failed. Status:', res.status, 'Body:', data.message);
         throw new Error(`Register order failed (${res.status}): ${data.message}`);
     }
@@ -52,7 +73,8 @@ exports.registerDeliveryOrder = async (order) => {
 
 // Create delivery record
 exports.createDeliveryRecord = async (order_id) => {
-    const url = `${DELIVERY_URL()}/api/deliveries`;
+    const base = requireBaseUrl();
+    const url = `${base}/api/deliveries`;
     console.log('[Delivery] Creating delivery record at:', url);
 
     const estimatedDelivery = new Date();
@@ -80,7 +102,7 @@ exports.createDeliveryRecord = async (order_id) => {
     return data;
 };
 
-// Process delivery — runs both steps in sequence
+// Process delivery — register when supported, then create delivery record
 exports.processDelivery = async (order) => {
     try {
         await exports.registerDeliveryOrder(order);
