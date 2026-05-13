@@ -34,3 +34,13 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Prevent Shadow DOM conflicts */
+* {
+  box-sizing: border-box;
+}
+
+/* Fix for HeroUI Shadow DOM issues */
+[data-ui-component] {
+  contain: layout style paint;
+}

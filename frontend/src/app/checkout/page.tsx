@@ -168,7 +168,10 @@ function CheckoutPageContent() {
         shipping_fee: shipping,
       };
 
+      console.log('Creating order with data:', orderData);
       const orderResponse = await apiClient.post('/orders', orderData);
+      console.log('Order response:', orderResponse.data);
+      
       const orderId = orderResponse.data.order.order_id;
       const orderTotal = orderResponse.data.order.total_amount;
 
@@ -180,7 +183,9 @@ function CheckoutPageContent() {
         phone_number: paymentMethod === 'COD' ? null : formData.phone.replace(/\s/g, ''),
       };
 
+      console.log('Submitting payment with data:', paymentData);
       await apiClient.post('/payments/confirm', paymentData);
+      console.log('Payment confirmed successfully');
 
       clearCart();
       setOrderNumber(orderId);
