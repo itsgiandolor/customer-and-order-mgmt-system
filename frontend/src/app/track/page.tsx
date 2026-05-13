@@ -39,7 +39,7 @@ const orderStatusSteps = [
 ];
 
 function TrackOrderPageInner() {
-  const [contactNumber, setContactNumber] = useState('');
+  const [orderId, setOrderId] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,29 +49,28 @@ function TrackOrderPageInner() {
 
   // Load from URL params on mount, fallback to localStorage
   useEffect(() => {
-    const urlContact = searchParams.get('contact');
     const urlOrderId = searchParams.get('order_id');
-    const savedContact = urlContact || localStorage.getItem('customerContact');
+    const savedOrderId = urlOrderId || localStorage.getItem('lastOrderId');
 
-    if (savedContact) {
-      setContactNumber(savedContact);
-      fetchOrders(savedContact);
+    if (savedOrderId) {
+      setOrderId(savedOrderId);
+      fetchOrder(savedOrderId);
     }
   }, []);
 
-  const fetchOrders = async (contact: string) => {
-    if (!contact) return;
+  const fetchOrder = async (id: string) => {
+    if (!id) return;
 
     setLoading(true);
     setError(null);
     setSearched(true);
 
     try {
-      const response = await apiClient.get(`/orders/customer/${encodeURIComponent(contact)}`);
-      setOrders(response.data);
-      localStorage.setItem('customerContact', contact);
+      const response = await apiClient.get(`/orders/${encodeURIComponent(id)}`);
+      setOrders([response.data]);
+      localStorage.setItem('lastOrderId', id);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to fetch orders.");
+      setError(err.response?.data?.message || "Order not found. Please check the Order Number.");
       setOrders([]);
     } finally {
       setLoading(false);
@@ -80,11 +79,11 @@ function TrackOrderPageInner() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactNumber) {
-      setError("Please enter your contact number");
+    if (!orderId) {
+      setError("Please enter your Order Number");
       return;
     }
-    fetchOrders(contactNumber);
+    fetchOrder(orderId);
   };
 
   const selectOrder = (order: Order) => {
@@ -136,9 +135,9 @@ function TrackOrderPageInner() {
       {/* Main Content */}
       <div className="max-w-[1920px] mx-auto px-8 lg:px-12 xl:px-16 py-2 lg:py-4">
         <h1 className="text-3xl lg:text-4xl font-semibold text-black mb-3">Track Your Order</h1>
-        <p className="text-gray-500 mb-6">Enter your contact number to see your orders</p>
+        <p className="text-gray-500 mb-6">Enter your Order Number to track your order</p>
 
-        
+
         {selectedOrder ? (
           /* Selected Order Details View */
           <div className="space-y-6">
@@ -155,7 +154,7 @@ function TrackOrderPageInner() {
             <Card className="rounded-xl border border-gray-200 shadow-none p-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                  <p className="text-sm text-gray-500">Order ID</p>
+                  <p className="text-sm text-gray-500">Order Number</p>
                   <p className="text-xl font-bold text-black">{selectedOrder.order_id}</p>
                 </div>
                 <div className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusColor(selectedOrder.order_status)}`}>
@@ -244,12 +243,12 @@ function TrackOrderPageInner() {
               <Card className="rounded-xl border border-gray-200 shadow-none p-6">
                 <form onSubmit={handleSearch} className="flex gap-4">
                   <div className="flex-1">
-                    <label className="text-sm font-medium text-gray-700 block mb-2">Contact Number</label>
+                    <label className="text-sm font-medium text-gray-700 block mb-2">Order Number</label>
                     <input
                       type="text"
-                      value={contactNumber}
-                      onChange={(e) => setContactNumber(e.target.value)}
-                      placeholder="e.g., 09171234567"
+                      value={orderId}
+                      onChange={(e) => setOrderId(e.target.value)}
+                      placeholder="e.g., ORD-123456"
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 text-black"
                     />
                   </div>
@@ -259,7 +258,7 @@ function TrackOrderPageInner() {
                       isDisabled={loading}
                       className="bg-indigo-600 text-white font-semibold px-8 rounded-lg h-12"
                     >
-                      {loading ? 'Searching...' : 'Find My Orders'}
+                      {loading ? 'Searching...' : 'Track Order'}
                     </Button>
                   </div>
                 </form>
@@ -376,7 +375,7 @@ function TrackOrderPageInner() {
               <Card className="rounded-xl border border-gray-200 shadow-none p-6 bg-indigo-50">
                 <h3 className="font-semibold text-indigo-900 mb-2">Quick Tip</h3>
                 <p className="text-sm text-indigo-700">
-                  Your contact number is saved for convenience. You can track all your orders by entering the same phone number used during checkout.
+                  You can find your Order Number in your confirmation email or the order receipt page shown after checkout.
                 </p>
               </Card>
             </div>
