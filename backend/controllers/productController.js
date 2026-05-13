@@ -133,15 +133,27 @@ exports.createProduct = async (req, res) => {
             image_url: image_url || "https://placehold.co/300x200",
         });
 
+        // Sync to Inventory API
         if (process.env.INVENTORY_API_URL) {
             try {
-                await fetch(`${process.env.INVENTORY_API_URL}/api/inventory/update`, {
+                const invRes = await fetch(`${process.env.INVENTORY_API_URL}/api/inventory/update`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ product_id: product.product_id, current_stock: initial_stock }),
+                    body: JSON.stringify({
+                        product_id: product.product_id,
+                        product_name: product.product_name,  // ← added this
+                        current_stock: initial_stock,
+                    }),
                 });
+
+                if (invRes.ok) {
+                    console.log(`[Inventory] Successfully registered ${product.product_id} - ${product.product_name}`);
+                } else {
+                    const err = await invRes.json();
+                    console.warn(`[Inventory] Registration failed for ${product.product_id}:`, err.message);
+                }
             } catch (err) {
-                console.warn(`[Inventory] Failed to register ${product.product_id}:`, err.message);
+                console.warn(`[Inventory] Failed to reach inventory API for ${product.product_id}:`, err.message);
             }
         }
 
@@ -210,46 +222,60 @@ exports.deactivateProduct = async (req, res) => {
 // Seed: Uses the Inventory team's actual product IDs + adds catalog details
 exports.seedProducts = async (req, res) => {
     try {
-        const products = [
-            { product_id: "P945655", product_name: "Mechanical Keyboard KLKY-3000", description: "Premium mechanical keyboard", price: 3500, category: "Electronics" },
-            { product_id: "P945674", product_name: "Washing Machine 360 Tornado", description: "Full-auto washing machine", price: 18000, category: "Home & Living" },
-            { product_id: "P945885", product_name: "Foldable Flatscreen TV 2026", description: "Next-gen foldable display", price: 55000, category: "Electronics" },
-            { product_id: "P942315", product_name: "Solar Emergency Light 3700", description: "Rechargeable solar emergency lamp", price: 850, category: "Home & Living" },
-            { product_id: "P343775", product_name: "Bluetooth Speaker CRV888", description: "Portable wireless speaker", price: 1200, category: "Electronics" },
-            { product_id: "P363175", product_name: "Portable Electric Fan", description: "USB rechargeable desk fan", price: 650, category: "Home & Living" },
-            { product_id: "P47865",  product_name: "Pocket Wifi 700", description: "4G LTE portable wifi device", price: 1500, category: "Electronics" },
-            { product_id: "P22865",  product_name: "Ginebra San Miguel", description: "Philippine gin 350ml", price: 75, category: "Food & Beverages" },
-            { product_id: "P422135", product_name: "Old Spice", description: "Classic men's deodorant", price: 250, category: "Beauty & Personal Care" },
-            { product_id: "P741125", product_name: "AI Robot Version 2", description: "AI-powered desktop assistant robot", price: 12000, category: "Electronics" },
-            { product_id: "P741135", product_name: "AI Robot Version 3", description: "Advanced AI robot with voice control", price: 18000, category: "Electronics" },
-            { product_id: "P741185", product_name: "AI Robot Version 4", description: "Pro AI robot with facial recognition", price: 25000, category: "Electronics" },
-            { product_id: "P000085", product_name: "iPhone 18 Pro Max", description: "Apple iPhone 18 Pro Max 256GB", price: 89000, category: "Electronics" },
-            { product_id: "P007896", product_name: "NMAX 2nd hand", description: "Yamaha NMAX pre-owned, good condition", price: 65000, category: "Automotive" },
-        ];
+        if (!process.env.INVENTORY_API_URL) {
+            return res.status(503).json({ message: "INVENTORY_API_URL is not set." });
+        }
 
-        if (isMongoConnected()) {
-            // Clear old products first to avoid ID conflicts
-            await Product.deleteMany({});
+        // Pull the live product list directly from the Inventory API
+        let inventoryProducts = [];
+        try {
+            const invRes = await fetch(`${process.env.INVENTORY_API_URL}/api/inventory`);
+            if (!invRes.ok) throw new Error("Inventory API returned an error.");
+            inventoryProducts = await invRes.json();
+        } catch (err) {
+            return res.status(503).json({ message: "Could not reach Inventory API: " + err.message });
+        }
 
-            for (const product of products) {
-                await Product.findOneAndUpdate(
-                    { product_id: product.product_id },
-                    {
-                        ...product,
-                        image_url: "https://placehold.co/300x200",
-                        is_active: true,
-                        rating: 5.0,
-                        reviews: "0",
-                    },
-                    { upsert: true, new: true }
-                );
+        if (!inventoryProducts.length) {
+            return res.status(200).json({ message: "Inventory API returned no products. Nothing to seed." });
+        }
+
+        if (!isMongoConnected()) {
+            return res.status(503).json({ message: "MongoDB is not connected." });
+        }
+
+        const results = { upserted: [], skipped: [] };
+
+        for (const invItem of inventoryProducts) {
+            // Only upsert if product_id doesn't already exist
+            // This preserves all manually added products and their custom details
+            const existing = await Product.findOne({ product_id: invItem.product_id });
+
+            if (!existing) {
+                await Product.create({
+                    product_id: invItem.product_id,
+                    product_name: invItem.product_name,
+                    description: "No description yet.",
+                    price: 0,
+                    category: "Uncategorized",
+                    rating: 5.0,
+                    reviews: "0",
+                    image_url: "https://placehold.co/300x200",
+                    is_active: true,
+                });
+                results.upserted.push(invItem.product_id);
+            } else {
+                results.skipped.push(invItem.product_id); // already exists, don't touch it
             }
         }
 
         return res.status(200).json({
-            message: "Products seeded successfully with inventory team's product IDs.",
-            products_count: products.length,
+            message: "Seed complete. Existing products were not overwritten.",
+            added: results.upserted.length,
+            skipped_already_exist: results.skipped.length,
+            added_ids: results.upserted,
         });
+
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -22,8 +22,6 @@ function CheckoutPageContent() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('GCash');
   const [deliveryMethod, setDeliveryMethod] = useState('standard');
-  const [paymentPhone, setPaymentPhone] = useState('');
-  const [paymentPhoneError, setPaymentPhoneError] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
@@ -121,11 +119,6 @@ function CheckoutPageContent() {
       agreedToTerms
     );
 
-    // Add payment phone validation for GCash/Maya
-    if (paymentMethod === 'GCash' || paymentMethod === 'Maya') {
-      return baseValid && paymentPhone.trim() && /^(09|\+639)\d{9}$/.test(paymentPhone.replace(/\s/g, ''));
-    }
-
     return baseValid;
   };
 
@@ -141,15 +134,7 @@ function CheckoutPageContent() {
     if (!formData.address) newErrors.address = 'Address is required';
     if (!formData.zipCode) newErrors.zipCode = 'Zip code is required';
 
-    let paymentPhoneErr = '';
-    if (paymentMethod !== 'COD' && !paymentPhone) {
-      paymentPhoneErr = `${paymentMethod} number is required`;
-    } else if ((paymentMethod === 'GCash' || paymentMethod === 'Maya') && !/^(09|\+639)\d{9}$/.test(paymentPhone.replace(/\s/g, ''))) {
-      paymentPhoneErr = `Invalid ${paymentMethod} number`;
-    }
-    setPaymentPhoneError(paymentPhoneErr);
-
-    if (Object.keys(newErrors).length > 0 || paymentPhoneErr) {
+    if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
@@ -163,7 +148,7 @@ function CheckoutPageContent() {
   const confirmOrder = async () => {
     setShowConfirmModal(false);
     setLoading(true);
-    
+
     try {
       // Create order
       const orderData = {
@@ -192,20 +177,20 @@ function CheckoutPageContent() {
         order_id: orderId,
         payment_method: paymentMethod,
         payment_amount: orderTotal,
-        phone_number: paymentMethod === 'COD' ? null : paymentPhone.replace(/\s/g, ''),
+        phone_number: paymentMethod === 'COD' ? null : formData.phone.replace(/\s/g, ''),
       };
 
       await apiClient.post('/payments/confirm', paymentData);
 
       clearCart();
       setOrderNumber(orderId);
-      
+
       // Redirect to order success page
       window.location.href = `/order-success?order=${orderId}`;
 
     } catch (err: any) {
       console.error(err);
-      
+
       // Redirect to order failure page
       window.location.href = '/order-failure';
     } finally {
@@ -453,7 +438,6 @@ function CheckoutPageContent() {
                       checked={paymentMethod === value}
                       onChange={(e) => {
                         setPaymentMethod(e.target.value);
-                        setPaymentPhoneError('');
                       }}
                       className="w-5 h-5 accent-indigo-500"
                     />
@@ -461,29 +445,6 @@ function CheckoutPageContent() {
                   </label>
                 ))}
               </div>
-
-              {/* Payment Phone Number Input for GCash/Maya */}
-              {(paymentMethod === 'GCash' || paymentMethod === 'Maya') && (
-                <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                  <label className="text-sm text-gray-700 block mb-2">Enter your {paymentMethod} number</label>
-                  <input
-                    type="tel"
-                    value={paymentPhone}
-                    onChange={(e) => {
-                      setPaymentPhone(e.target.value);
-                      if (e.target.value && !/^(09|\+639)\d{9}$/.test(e.target.value.replace(/\s/g, ''))) {
-                        setPaymentPhoneError('Invalid phone number');
-                      } else {
-                        setPaymentPhoneError('');
-                      }
-                    }}
-                    placeholder="09171234567"
-                    className={`w-full border rounded-lg px-4 py-2 text-black outline-none ${paymentPhoneError ? 'border-red-500' : 'border-neutral-300'}`}
-                  />
-                  {paymentPhoneError && <p className="text-red-500 text-sm mt-1">{paymentPhoneError}</p>}
-                  <p className="text-xs text-gray-600 mt-2">Format: 09XX XXX XXXX</p>
-                </div>
-              )}
 
               {/* COD Notice */}
               {paymentMethod === 'COD' && (
