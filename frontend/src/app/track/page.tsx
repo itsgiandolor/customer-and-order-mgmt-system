@@ -39,7 +39,7 @@ const orderStatusSteps = [
 ];
 
 function TrackOrderPageInner() {
-  const [orderId, setOrderId] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,12 +53,12 @@ function TrackOrderPageInner() {
     const savedOrderId = urlOrderId || localStorage.getItem('lastOrderId');
 
     if (savedOrderId) {
-      setOrderId(savedOrderId);
-      fetchOrder(savedOrderId);
+      setSearchInput(savedOrderId);
+      fetchByOrderId(savedOrderId);
     }
   }, []);
 
-  const fetchOrder = async (id: string) => {
+  const fetchByOrderId = async (id: string) => {
     if (!id) return;
 
     setLoading(true);
@@ -77,13 +77,40 @@ function TrackOrderPageInner() {
     }
   };
 
+  const fetchByPhoneNumber = async (phone: string) => {
+    if (!phone) return;
+
+    setLoading(true);
+    setError(null);
+    setSearched(true);
+
+    try {
+      const response = await apiClient.get(`/orders/customer/${encodeURIComponent(phone)}`);
+      setOrders(response.data);
+      localStorage.setItem('lastPhoneNumber', phone);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "No orders found for this phone number.");
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orderId) {
-      setError("Please enter your Order Number");
+    if (!searchInput) {
+      setError("Please enter an Order Number or Phone Number");
       return;
     }
-    fetchOrder(orderId);
+
+    // Check if input looks like a phone number (starts with 09 or +639, contains digits)
+    const isPhoneNumber = /^(09|\+639)\d{9}$/.test(searchInput.replace(/\s/g, ''));
+
+    if (isPhoneNumber) {
+      fetchByPhoneNumber(searchInput);
+    } else {
+      fetchByOrderId(searchInput);
+    }
   };
 
   const selectOrder = (order: Order) => {
@@ -135,7 +162,7 @@ function TrackOrderPageInner() {
       {/* Main Content */}
       <div className="max-w-[1920px] mx-auto px-8 lg:px-12 xl:px-16 py-2 lg:py-4">
         <h1 className="text-3xl lg:text-4xl font-semibold text-black mb-3">Track Your Order</h1>
-        <p className="text-gray-500 mb-6">Enter your Order Number to track your order</p>
+        <p className="text-gray-500 mb-6">Enter your Order Number or Phone Number to track your order</p>
 
 
         {selectedOrder ? (
@@ -243,12 +270,12 @@ function TrackOrderPageInner() {
               <Card className="rounded-xl border border-gray-200 shadow-none p-6">
                 <form onSubmit={handleSearch} className="flex gap-4">
                   <div className="flex-1">
-                    <label className="text-sm font-medium text-gray-700 block mb-2">Order Number</label>
+                    <label className="text-sm font-medium text-gray-700 block mb-2">Order Number or Phone Number</label>
                     <input
                       type="text"
-                      value={orderId}
-                      onChange={(e) => setOrderId(e.target.value)}
-                      placeholder="e.g., ORD-123456"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      placeholder="e.g., ORD-123456 or 09171234567"
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 text-black"
                     />
                   </div>
@@ -258,7 +285,7 @@ function TrackOrderPageInner() {
                       isDisabled={loading}
                       className="bg-indigo-600 text-white font-semibold px-8 rounded-lg h-12"
                     >
-                      {loading ? 'Searching...' : 'Track Order'}
+                      {loading ? 'Searching...' : 'Track'}
                     </Button>
                   </div>
                 </form>
@@ -375,7 +402,7 @@ function TrackOrderPageInner() {
               <Card className="rounded-xl border border-gray-200 shadow-none p-6 bg-indigo-50">
                 <h3 className="font-semibold text-indigo-900 mb-2">Quick Tip</h3>
                 <p className="text-sm text-indigo-700">
-                  You can find your Order Number in your confirmation email or the order receipt page shown after checkout.
+                  You can track orders by <strong>Order Number</strong> (found in your confirmation email) or the <strong>Phone Number</strong> used during checkout.
                 </p>
               </Card>
             </div>
@@ -387,7 +414,7 @@ function TrackOrderPageInner() {
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📦</div>
             <h3 className="text-xl font-semibold text-black mb-2">No Orders Found</h3>
-            <p className="text-gray-500 mb-4">We couldn't find any orders for this contact number</p>
+            <p className="text-gray-500 mb-4">We couldn't find any orders with that Order Number or Phone Number</p>
             <Link href="/catalog" className="text-indigo-600 hover:underline">
               Start Shopping →
             </Link>
