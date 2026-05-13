@@ -1,11 +1,23 @@
 const DELIVERY_URL = () => process.env.DELIVERY_API_URL;
 
+// Safely parse response — returns text if not JSON
+const safeJson = async (res) => {
+    const text = await res.text();
+    try {
+        return JSON.parse(text);
+    } catch {
+        return { message: text.slice(0, 200) }; // return first 200 chars of HTML for logging
+    }
+};
+
 // Register order in Delivery system
-// Creates a delivery order in the external delivery API
 exports.registerDeliveryOrder = async (order) => {
-    const res = await fetch(`${DELIVERY_URL()}/api/deliveries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    const url = `${DELIVERY_URL()}/api/orders`;
+    console.log('[Delivery] Registering order at:', url);
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             order_id: order.order_id,
             customer_info: {
@@ -14,7 +26,7 @@ exports.registerDeliveryOrder = async (order) => {
                 contact_number: order.customer_info.contact_number,
                 delivery_address: order.customer_info.delivery_address,
             },
-            order_source: order.order_source || "web",
+            order_source: order.order_source || 'web',
             items: order.items.map((i) => ({
                 product_id: i.product_id,
                 product_name: i.product_name,
@@ -23,56 +35,57 @@ exports.registerDeliveryOrder = async (order) => {
                 subtotal: i.subtotal,
             })),
             total_amount: order.total_amount,
-            payment_status: "Confirmed",
+            payment_status: 'Confirmed',
         }),
     });
 
+    const data = await safeJson(res);
+
     if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message);
+        console.error('[Delivery] registerDeliveryOrder failed. Status:', res.status, 'Body:', data.message);
+        throw new Error(`Register order failed (${res.status}): ${data.message}`);
     }
 
-    return await res.json();
+    console.log('[Delivery] ✅ Order registered successfully:', order.order_id);
+    return data;
 };
 
 // Create delivery record
-// Creates a shipment/delivery record for the order
 exports.createDeliveryRecord = async (order_id) => {
+    const url = `${DELIVERY_URL()}/api/deliveries`;
+    console.log('[Delivery] Creating delivery record at:', url);
+
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 7);
 
-    const res = await fetch(`${DELIVERY_URL()}/api/deliveries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            order_id: order_id,
+            order_id,
             estimated_delivery: estimatedDelivery.toISOString(),
-            courier_name: "J&T Express",
-            delivery_notes: "",
+            courier_name: 'J&T Express',
+            delivery_notes: '',
         }),
     });
 
+    const data = await safeJson(res);
+
     if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message);
+        console.error('[Delivery] createDeliveryRecord failed. Status:', res.status, 'Body:', data.message);
+        throw new Error(`Create delivery failed (${res.status}): ${data.message}`);
     }
 
-    return await res.json();
+    console.log('[Delivery] ✅ Delivery record created for order:', order_id);
+    return data;
 };
 
-// Process delivery for order
-// Combines both registration and delivery record creation
+// Process delivery — runs both steps in sequence
 exports.processDelivery = async (order) => {
     try {
-        // Step 1: Register order in Delivery system
         await exports.registerDeliveryOrder(order);
-        console.log("[Delivery] Order registered in delivery system:", order.order_id);
-
-        // Step 2: Create delivery record
         await exports.createDeliveryRecord(order.order_id);
-        console.log("[Delivery] Shipment created for order:", order.order_id);
-
-        return { success: true, message: "Order processed for delivery" };
+        return { success: true };
     } catch (error) {
         throw new Error(`Delivery processing failed: ${error.message}`);
     }

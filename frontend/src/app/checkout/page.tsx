@@ -171,7 +171,7 @@ function CheckoutPageContent() {
       console.log('Creating order with data:', orderData);
       const orderResponse = await apiClient.post('/orders', orderData);
       console.log('Order response:', orderResponse.data);
-      
+
       const orderId = orderResponse.data.order.order_id;
       const orderTotal = orderResponse.data.order.total_amount;
 
@@ -232,12 +232,6 @@ function CheckoutPageContent() {
             <Link href="/" className="text-2xl lg:text-4xl font-bold text-white">
               KAM<span className="text-indigo-500">S</span>
             </Link>
-            <div className="hidden md:flex items-center gap-6 lg:gap-24">
-              <Link href="/catalog" className="text-white text-base lg:text-xl">Shop</Link>
-              <Link href="/cart" className="text-white text-base lg:text-xl">Cart</Link>
-              <Link href="/track" className="text-white text-base lg:text-xl">Track Order</Link>
-              <Link href="#" className="text-white text-base lg:text-xl">About Us</Link>
-            </div>
           </div>
         </div>
       </nav>
