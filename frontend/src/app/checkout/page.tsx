@@ -183,7 +183,10 @@ function CheckoutPageContent() {
         shipping_fee: shipping,
       };
 
+      console.log('Creating order with data:', orderData);
       const orderResponse = await apiClient.post('/orders', orderData);
+      console.log('Order response:', orderResponse.data);
+      
       const orderId = orderResponse.data.order.order_id;
       const orderTotal = orderResponse.data.order.total_amount;
 
@@ -195,7 +198,9 @@ function CheckoutPageContent() {
         phone_number: paymentMethod === 'COD' ? null : paymentPhone.replace(/\s/g, ''),
       };
 
+      console.log('Submitting payment with data:', paymentData);
       await apiClient.post('/payments/confirm', paymentData);
+      console.log('Payment confirmed successfully');
 
       clearCart();
       setOrderNumber(orderId);
@@ -204,10 +209,18 @@ function CheckoutPageContent() {
       window.location.href = `/order-success?order=${orderId}`;
 
     } catch (err: any) {
-      console.error(err);
+      console.error('Order creation error:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
       
-      // Redirect to order failure page
-      window.location.href = '/order-failure';
+      // Show specific error to user
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || 'Order failed. Please try again.';
+      alert(`Order Error: ${errorMessage}`);
+      
+      // Redirect to order failure page after showing error
+      setTimeout(() => {
+        window.location.href = '/order-failure';
+      }, 2000);
     } finally {
       setLoading(false);
     }
