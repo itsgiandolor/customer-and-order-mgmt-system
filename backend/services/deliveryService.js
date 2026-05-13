@@ -1,6 +1,12 @@
 const DELIVERY_URL = () => process.env.DELIVERY_API_URL;
 
-const requireBaseUrl = () => {
+/** Same value delivery subsystem should use as ORDER_MGMT_URL (Render sets RENDER_EXTERNAL_URL). */
+const customerApiBaseForPartners = () => {
+    const raw = process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_CUSTOMER_API_URL || '';
+    return typeof raw === 'string' ? raw.replace(/\/+$/, '') : '';
+};
+
+const requireDeliveryBase = () => {
     const base = DELIVERY_URL();
     if (!base || typeof base !== 'string') {
         throw new Error('DELIVERY_API_URL is not set');
@@ -8,13 +14,12 @@ const requireBaseUrl = () => {
     return base.replace(/\/+$/, '');
 };
 
-// Safely parse response — returns text if not JSON
 const safeJson = async (res) => {
     const text = await res.text();
     try {
         return JSON.parse(text);
     } catch {
-        return { message: text.slice(0, 200) }; // return first 200 chars of HTML for logging
+        return { message: text.slice(0, 200) };
     }
 };
 
@@ -24,11 +29,18 @@ const isMissingRoute404 = (res, data) => {
     return msg.includes('Cannot POST') || msg.includes('Cannot GET');
 };
 
-// Register order in Delivery system (skipped if that route is not deployed)
+const partnerOrderMgmtHint = () => {
+    const ours = customerApiBaseForPartners();
+    if (ours) {
+        return `On the Delivery service (Render), set ORDER_MGMT_URL=${ours} — their createDelivery loads GET ${ours}/api/orders/<order_id>.`;
+    }
+    return 'On the Delivery service (Render), set ORDER_MGMT_URL to this API’s public HTTPS origin (same host you use for /api/orders). On this service set RENDER_EXTERNAL_URL or PUBLIC_CUSTOMER_API_URL so logs can print the exact value.';
+};
+
+// Register order in Delivery system (optional — not deployed on all delivery hosts)
 exports.registerDeliveryOrder = async (order) => {
-    const base = requireBaseUrl();
+    const base = requireDeliveryBase();
     const url = `${base}/api/orders`;
-    console.log('[Delivery] Registering order at:', url);
 
     const res = await fetch(url, {
         method: 'POST',
@@ -58,24 +70,18 @@ exports.registerDeliveryOrder = async (order) => {
 
     if (!res.ok) {
         if (isMissingRoute404(res, data)) {
-            console.warn(
-                '[Delivery] /api/orders is not available on this host; skipping registration (proceeding with delivery only).'
-            );
             return null;
         }
-        console.error('[Delivery] registerDeliveryOrder failed. Status:', res.status, 'Body:', data.message);
+        console.error('[Delivery] registerDeliveryOrder failed:', res.status, data.message);
         throw new Error(`Register order failed (${res.status}): ${data.message}`);
     }
 
-    console.log('[Delivery] ✅ Order registered successfully:', order.order_id);
     return data;
 };
 
-// Create delivery record
 exports.createDeliveryRecord = async (order_id) => {
-    const base = requireBaseUrl();
+    const base = requireDeliveryBase();
     const url = `${base}/api/deliveries`;
-    console.log('[Delivery] Creating delivery record at:', url);
 
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 7);
@@ -94,21 +100,20 @@ exports.createDeliveryRecord = async (order_id) => {
     const data = await safeJson(res);
 
     if (!res.ok) {
-        console.error('[Delivery] createDeliveryRecord failed. Status:', res.status, 'Body:', data.message);
+        const body = String(data?.message ?? '');
+        if (res.status === 404 && body.includes('Order not found in Customer')) {
+            console.error('[Delivery] createDelivery failed: delivery cannot GET this order from Customer API.', partnerOrderMgmtHint());
+        } else {
+            console.error('[Delivery] createDelivery failed:', res.status, body);
+        }
         throw new Error(`Create delivery failed (${res.status}): ${data.message}`);
     }
 
-    console.log('[Delivery] ✅ Delivery record created for order:', order_id);
     return data;
 };
 
-// Process delivery — register when supported, then create delivery record
 exports.processDelivery = async (order) => {
-    try {
-        await exports.registerDeliveryOrder(order);
-        await exports.createDeliveryRecord(order.order_id);
-        return { success: true };
-    } catch (error) {
-        throw new Error(`Delivery processing failed: ${error.message}`);
-    }
+    await exports.registerDeliveryOrder(order);
+    await exports.createDeliveryRecord(order.order_id);
+    return { success: true };
 };

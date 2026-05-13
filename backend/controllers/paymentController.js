@@ -63,12 +63,16 @@ exports.confirmPayment = async (req, res) => {
                 payment_date: new Date(),
             });
 
-            order.payment_status = 'Pending';
+            // Partner delivery API validates GET ORDER_MGMT_URL/api/orders/:id and requires payment_status === "Confirmed".
+            // COD cash is still Pending on the Payment document above.
+            order.payment_status = 'Confirmed';
             order.order_status = 'Confirmed';
             await order.save();
 
             try {
-                await processDelivery(order);
+                const orderForDelivery = await Order.findOne({ order_id });
+                if (!orderForDelivery) throw new Error('Order missing after save');
+                await processDelivery(orderForDelivery);
                 order.order_status = 'Ready for Fulfillment';
                 await order.save();
             } catch (err) {
@@ -106,9 +110,11 @@ exports.confirmPayment = async (req, res) => {
             console.error('[Inventory deduction failed]', err.message);
         }
 
-        // Process Delivery
+        // Process Delivery (use DB copy so partner GET sees the same payment_status)
         try {
-            await processDelivery(order);
+            const orderForDelivery = await Order.findOne({ order_id });
+            if (!orderForDelivery) throw new Error('Order missing after save');
+            await processDelivery(orderForDelivery);
             order.order_status = 'Ready for Fulfillment';
             await order.save();
         } catch (err) {

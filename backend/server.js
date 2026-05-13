@@ -48,6 +48,14 @@ const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  const partnerBase =
+    process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_CUSTOMER_API_URL;
+  if (partnerBase) {
+    const b = String(partnerBase).replace(/\/+$/, "");
+    console.log(
+      `[Integration] Delivery subsystem: set ORDER_MGMT_URL on Render to ${b}`
+    );
+  }
 });
 
 module.exports = app;
